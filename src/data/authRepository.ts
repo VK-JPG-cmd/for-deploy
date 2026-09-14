@@ -25,10 +25,13 @@ async function fetchWithTimeout(urlPath: string, options: any, timeout = 15000):
         signal: controller.signal,
       });
       clearTimeout(id);
-      if (response) {
-        // Save the working host for all subsequent requests
+      // Only lock in and return if response is a valid API response (not a 404/502 from a random cellular proxy)
+      if (response && response.status !== 404 && response.status < 500) {
         const origin = new URL(url).origin;
         setResolvedHost(origin);
+        return response;
+      }
+      if (response && response.ok) {
         return response;
       }
     } catch (err) {
