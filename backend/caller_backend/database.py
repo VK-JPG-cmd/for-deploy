@@ -20,15 +20,20 @@ DB_USER = os.getenv("DB_USER", "apt_callmgmt_app")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "Call@intern_aepttas")
 
 encoded_password = urllib.parse.quote_plus(DB_PASSWORD)
+DEFAULT_DB_URL = f"postgresql+psycopg2://{DB_USER}:{encoded_password}@{TAILSCALE_IP}:{DB_PORT}/{DB_NAME}?sslmode=require"
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    f"postgresql+psycopg2://{DB_USER}:{encoded_password}@{TAILSCALE_IP}:{DB_PORT}/{DB_NAME}?sslmode=require"
-)
+raw_db_url = os.getenv("DATABASE_URL", DEFAULT_DB_URL)
+if "aepttas_xdr_user" in raw_db_url or not raw_db_url:
+    DATABASE_URL = DEFAULT_DB_URL
+else:
+    DATABASE_URL = raw_db_url
+
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 # Connect args with timeout and SSL settings for cloud database (Render / AWS)
 connect_args = {
-    "connect_timeout": 5,
+    "connect_timeout": 10,
     "sslmode": "require",
     "channel_binding": "disable",
     "options": f"-c search_path={DB_SCHEMA},public"
@@ -45,7 +50,7 @@ try:
     )
 except Exception as e:
     logger.warning(f"Initial engine setup warning: {e}")
-    engine = create_engine(DATABASE_URL)
+    engine = create_engine(DATABASE_URL, connect_args=connect_args)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

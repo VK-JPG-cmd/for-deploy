@@ -128,7 +128,24 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
 @router.post("/api/auth/register")
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
     try:
-        name = req.name or req.full_name or req.username or req.email.split('@')[0]
+        clean_email = req.email.strip().lower()
+        name = req.name or req.full_name or req.username or clean_email.split('@')[0]
+        
+        # Check if user already exists
+        existing = db.execute(
+            text("SELECT user_id, username FROM apt.apt_users_b WHERE LOWER(email) = :email"),
+            {"email": clean_email}
+        ).first()
+        
+        if existing:
+            logger.info(f"User already registered: ID={existing[0]}, Email={clean_email}")
+            return {
+                "status": "success",
+                "user_id": existing[0],
+                "message": "Account already registered"
+            }
+        
+        # Insert new user into database
         res = db.execute(text("""
             INSERT INTO apt.apt_users_b (
                 user_uuid, username, email, password_hash, created_by, created_date, last_updated_by, last_updated_date
@@ -138,12 +155,13 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
         """), {
             "uuid": str(uuid.uuid4()),
             "name": name,
-            "email": req.email.strip().lower(),
+            "email": clean_email,
             "pwd": req.password or "hash_pwd_placeholder",
             "dt": datetime.now()
         })
         uid = res.scalar()
         db.commit()
+        logger.info(f"Successfully registered new user in cloud DB: ID={uid}, Name={name}, Email={clean_email}")
         return {
             "status": "success",
             "user_id": uid,
@@ -151,12 +169,8 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
         }
     except Exception as e:
         db.rollback()
-        logger.warning(f"Register DB error: {e}")
-        return {
-            "status": "success",
-            "user_id": 1,
-            "message": "Account registered successfully"
-        }
+        logger.error(f"Register DB error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Database error during registration: {str(e)}")
 
 @router.get("/api/health")
 @router.get("/health")
