@@ -548,7 +548,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           <View style={styles.statusCardContent}>
             {/* Glowing Shield SVG */}
             <View style={styles.shieldWrapper}>
-              <Svg width={90} height={90} viewBox="0 0 100 100">
+              <Svg width={80} height={80} viewBox="0 0 100 100">
                 <Circle cx="50" cy="50" r="45" fill={colors.purpleAccent} opacity={0.15} />
                 <Circle cx="50" cy="50" r="35" fill={colors.cyanAccent} opacity={0.1} />
                 <Path
@@ -568,7 +568,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <View style={styles.statusDetails}>
               <Text style={styles.statusLabelText}>YOUR DEVICE IS</Text>
               <View style={styles.protectedRow}>
-                <Text style={styles.protectedText}>PROTECTED</Text>
+                <Text style={styles.protectedText} numberOfLines={1} adjustsFontSizeToFit={true}>PROTECTED</Text>
                 <View style={styles.checkBadge}>
                   <Icon name="check" color="#fff" size={10} />
                 </View>
@@ -589,27 +589,27 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         {/* 3. STATS ROW */}
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
-            <Icon name="report" color={colors.redDanger} size={20} />
+            <Icon name="report" color={colors.redDanger} size={18} />
             <Text style={styles.statValue}>{dashboardMetrics?.threats_detected ?? 32}</Text>
-            <Text style={styles.statLabel}>Threats{'\n'}Blocked</Text>
+            <Text style={styles.statLabel} numberOfLines={2}>Threats{'\n'}Blocked</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Icon name="inventory" color={colors.purpleAccent} size={20} />
+            <Icon name="inventory" color={colors.purpleAccent} size={18} />
             <Text style={styles.statValue}>1.24K</Text>
-            <Text style={styles.statLabel}>APKs{'\n'}Scanned</Text>
+            <Text style={styles.statLabel} numberOfLines={2}>APKs{'\n'}Scanned</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Icon name="warning-amber" color={colors.orangeWarning} size={20} />
+            <Icon name="warning-amber" color={colors.orangeWarning} size={18} />
             <Text style={styles.statValue}>2</Text>
-            <Text style={styles.statLabel}>Vulnerabilities{'\n'}Found</Text>
+            <Text style={styles.statLabel} numberOfLines={2}>Vulns{'\n'}Found</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Icon name="shield" color={colors.cyanAccent} size={20} />
+            <Icon name="shield" color={colors.cyanAccent} size={18} />
             <Text style={styles.statValue}>15.6 GB</Text>
-            <Text style={styles.statLabel}>Data{'\n'}Protected</Text>
+            <Text style={styles.statLabel} numberOfLines={2}>Data{'\n'}Protected</Text>
           </View>
         </View>
 
@@ -1005,8 +1005,8 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingHorizontal: 16,
+    paddingBottom: 130,
     maxWidth: 720,
     width: '100%',
     alignSelf: 'center',
@@ -1185,30 +1185,30 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   statusCard: {
     width: '100%',
-    borderRadius: 24,
-    padding: 20,
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#38bdf844', // translucent cyan/purple gradient border simulation
-    marginTop: 10,
-    marginBottom: 24,
+    marginTop: 8,
+    marginBottom: 20,
   },
   statusCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   shieldWrapper: {
-    width: 110,
-    height: 110,
+    width: 85,
+    height: 85,
     justifyContent: 'center',
     alignItems: 'center',
   },
   statusDetails: {
     flex: 1,
-    paddingLeft: 16,
+    paddingLeft: 12,
   },
   statusLabelText: {
     color: '#D1D5DB',
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '600',
     letterSpacing: 0.5,
   },
@@ -1216,12 +1216,14 @@ const getStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginVertical: 2,
+    flexWrap: 'nowrap',
   },
   protectedText: {
     color: colors.text,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '900',
     letterSpacing: 0.5,
+    flexShrink: 1,
   },
   checkBadge: {
     width: 16,
@@ -1234,8 +1236,8 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   scoreLabel: {
     color: colors.textMuted,
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 11,
+    marginTop: 2,
   },
   scoreRow: {
     flexDirection: 'row',
@@ -1243,23 +1245,23 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   scoreBig: {
     color: colors.text,
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
   },
   scoreSmall: {
     color: colors.textMuted,
-    fontSize: 15,
-    marginBottom: 4,
+    fontSize: 13,
+    marginBottom: 3,
     marginLeft: 2,
   },
   scanTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
   },
   scanTimeText: {
     color: '#D1D5DB',
-    fontSize: 11,
+    fontSize: 10.5,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -1268,47 +1270,49 @@ const getStyles = (colors: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'space-evenly',
-    marginBottom: 28,
+    marginBottom: 20,
   },
   statItem: {
     alignItems: 'center',
     flex: 1,
+    paddingHorizontal: 2,
   },
   statValue: {
     color: colors.text,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: 'bold',
-    marginTop: 8,
+    marginTop: 4,
   },
   statLabel: {
     color: colors.textMuted,
-    fontSize: 10,
+    fontSize: 9.5,
     textAlign: 'center',
-    lineHeight: 12,
+    lineHeight: 11,
     marginTop: 2,
   },
   statDivider: {
     width: 1,
-    height: 40,
+    height: 36,
     backgroundColor: colors.border,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   sectionTitle: {
     color: colors.text,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
   },
   editLink: {
     color: '#60A5FA',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
   },
   gridRow: {
@@ -1318,39 +1322,39 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   gridItem: {
     flex: 0.23,
-    height: 96,
+    height: 90,
     backgroundColor: colors.cardBackground,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 6,
+    padding: 4,
   },
   gridIconBg: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   gridLabel: {
     color: colors.text,
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '500',
     textAlign: 'center',
-    lineHeight: 12,
+    lineHeight: 11,
   },
   aiCard: {
     width: '100%',
     backgroundColor: colors.cardBackground,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 20,
-    padding: 16,
-    marginTop: 28,
-    marginBottom: 28,
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 20,
+    marginBottom: 20,
   },
   aiContent: {
     flexDirection: 'row',
@@ -1359,24 +1363,24 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   aiTitle: {
     color: colors.text,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
   },
   aiDate: {
     color: colors.textMuted,
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 11,
+    marginTop: 2,
   },
   brainWrapper: {
     flex: 1,
-    height: 50,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
   aiArrowBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.cardBackgroundLight,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1387,12 +1391,12 @@ const getStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.cardBackground,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 14,
+    padding: 14,
   },
   activityIconBg: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: 10,
     backgroundColor: colors.redDanger + '26',
     justifyContent: 'center',
@@ -1400,16 +1404,16 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   activityTexts: {
     flex: 1,
-    marginLeft: 14,
+    marginLeft: 12,
   },
   activityTitle: {
     color: colors.text,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
   },
   activitySub: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 2,
   },
   activityTimeCol: {
@@ -1417,21 +1421,20 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   activityTime: {
     color: colors.textMuted,
-    fontSize: 11,
+    fontSize: 10.5,
   },
   activityStatus: {
     color: colors.redDanger,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '600',
-    marginTop: 4,
+    marginTop: 3,
   },
   floatingNavContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: Platform.OS === 'android' ? 12 : 20,
     left: 0,
     right: 0,
     paddingHorizontal: 16,
-    paddingVertical: 12,
     maxWidth: 720,
     width: '100%',
     alignSelf: 'center',
@@ -1440,19 +1443,19 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   floatingNav: {
     flexDirection: 'row',
-    height: 68,
-    borderRadius: 24,
+    height: 62,
+    borderRadius: 22,
     backgroundColor: colors.cardBackground + 'F2', // 0.95 opacity
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   navItem: {
-    height: 52,
-    borderRadius: 16,
-    paddingHorizontal: 8,
+    height: 48,
+    borderRadius: 14,
+    paddingHorizontal: 6,
     justifyContent: 'center',
     alignItems: 'center',
     flex: 1,
@@ -1460,7 +1463,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   navText: {
     color: colors.textMuted,
     fontSize: 9,
-    marginTop: 4,
+    marginTop: 3,
   },
   navTextActive: {
     color: colors.purpleAccent,

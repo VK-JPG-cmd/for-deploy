@@ -5,42 +5,24 @@ import { Storage } from '../utils/storage';
 
 const getBaseUrl = () => getAuthBaseUrl();
 
-async function fetchWithTimeout(urlPath: string, options: any, timeout = 15000): Promise<Response> {
-  // If urlPath is already an absolute URL, try it first, then try fallbacks
-  const path = urlPath.startsWith('http') ? new URL(urlPath).pathname : urlPath;
-  const urlsToTry = urlPath.startsWith('http')
-    ? [urlPath, ...getFallbackUrls().map(f => `${f}${path}`)]
-    : getFallbackUrls().map(f => `${f}${path}`);
+async function fetchWithTimeout(urlPath: string, options: any, timeout = 25000): Promise<Response> {
+  const base = getBaseUrl();
+  const url = urlPath.startsWith('http') ? urlPath : `${base}${urlPath.startsWith('/') ? '' : '/'}${urlPath}`;
 
-  // Deduplicate URLs
-  const uniqueUrls = Array.from(new Set(urlsToTry));
-
-  let lastError: any = null;
-  for (const url of uniqueUrls) {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-    try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal,
-      });
-      clearTimeout(id);
-      // Only lock in and return if response is a valid API response (not a 404/502 from a random cellular proxy)
-      if (response && response.status !== 404 && response.status < 500) {
-        const origin = new URL(url).origin;
-        setResolvedHost(origin);
-        return response;
-      }
-      if (response && response.ok) {
-        return response;
-      }
-    } catch (err) {
-      clearTimeout(id);
-      lastError = err;
-    }
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(id);
+    return response;
+  } catch (err: any) {
+    clearTimeout(id);
+    console.error(`[Auth] Network fetch error for ${url}:`, err);
+    throw err;
   }
-
-  throw lastError || new Error('Server unreachable');
 }
 
 export interface LoginPayload {
