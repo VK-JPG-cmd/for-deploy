@@ -168,7 +168,7 @@ export const GeoTrackingScreen: React.FC<GeoTrackingScreenProps> = ({ onBack }) 
     if (!isNaN(lat) && !isNaN(lon)) {
       GeolocationRepository.getNearbyPlaces({ latitude: lat, longitude: lon, radius_km: 10 })
         .then((places) => {
-          if (isMounted && places && places.length > 0) {
+          if (isMounted && Array.isArray(places) && places.length > 0) {
             setDynamicNearbyPlaces(
               places.map((p: any) => ({
                 name: p.place_name || p.name || 'Local Network Node',

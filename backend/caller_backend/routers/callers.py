@@ -42,7 +42,7 @@ def caller_lookup(num: str, db: Session = Depends(get_db)):
         }
     try:
         res = db.execute(
-            text("SELECT caller_name, is_spam_reported FROM apt.apt_callers_b WHERE RIGHT(phone_number, 10) = RIGHT(:n, 10) LIMIT 1"),
+            text("SELECT caller_name, is_spam FROM apt.apt_callers_b WHERE RIGHT(phone_number, 10) = RIGHT(:n, 10) LIMIT 1"),
             {"n": c_num}
         ).first()
         blocked = db.execute(
@@ -100,7 +100,7 @@ def upload_callers(req: List[CallerCreateRequest], db: Session = Depends(get_db)
 
             p = get_audit({"n": num, "nm": c.caller_name or "Unknown Caller"})
             db.execute(
-                text("INSERT INTO apt.apt_callers_b (caller_uuid, phone_number, caller_name, created_by, created_date, last_updated_by, last_updated_date, last_dml_by, last_dml_date, last_ddl_by, last_ddl_date, program_id) VALUES (:uuid, :n, :nm, :by, :dt, :by, :dt, :by, :dt, :by, :dt, :prog)"),
+                text("INSERT INTO apt.apt_callers_b (caller_uuid, phone_number, caller_name, created_by, created_date, last_updated_by, last_updated_date) VALUES (:uuid, :n, :nm, :by, :dt, :by, :dt)"),
                 p
             )
         db.commit()
@@ -123,7 +123,7 @@ def audit_spam():
 def get_caller_intel(child_id: str, db: Session = Depends(get_db)):
     try:
         blocked = db.execute(
-            text("SELECT phone_number, COALESCE(caller_name, 'Unknown'), reason, blocked_date FROM apt.apt_blocked_numbers_b b LEFT JOIN apt.apt_callers_b c ON RIGHT(b.phone_number, 10) = RIGHT(c.phone_number, 10) ORDER BY b.blocked_date DESC LIMIT 50")
+            text("SELECT b.phone_number, COALESCE(c.caller_name, 'Unknown'), b.reason, b.created_date FROM apt.apt_blocked_numbers_b b LEFT JOIN apt.apt_callers_b c ON RIGHT(b.phone_number, 10) = RIGHT(c.phone_number, 10) ORDER BY b.created_date DESC LIMIT 50")
         ).fetchall()
         reports = db.execute(
             text("SELECT report_id, phone_number, report_reason, created_date FROM apt.apt_reports_b ORDER BY created_date DESC LIMIT 50")

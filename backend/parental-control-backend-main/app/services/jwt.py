@@ -117,7 +117,7 @@ async def get_current_parent(
             logger.warning(f"[JWT] Dev token fallback query notice: {dev_err}")
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
         sub_identifier = payload.get("sub")
         if sub_identifier is None:
             logger.error("[JWT] Token does not contain 'sub'")

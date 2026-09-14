@@ -47,9 +47,9 @@ def update_settings(req: SettingsUpdateRequest, child_id: str = "1", db: Session
 def dashboard(db: Session = Depends(get_db)):
     try:
         today = date.today()
-        t = db.execute(text("SELECT count(*) FROM apt.apt_calls_b WHERE call_timestamp::date = :d"), {"d": today}).scalar() or 0
+        t = db.execute(text("SELECT count(*) FROM apt.apt_calls_b WHERE start_time::date = :d"), {"d": today}).scalar() or 0
         b = db.execute(text("SELECT count(*) FROM apt.apt_blocked_numbers_b WHERE created_date::date = :d"), {"d": today}).scalar() or 0
-        s = db.execute(text("SELECT count(*) FROM apt.apt_calls_b c JOIN apt.apt_callers_b cl ON c.caller_id = cl.caller_id WHERE c.call_timestamp::date = :d AND cl.is_spam_reported = true"), {"d": today}).scalar() or 0
+        s = db.execute(text("SELECT count(*) FROM apt.apt_calls_b c JOIN apt.apt_callers_b cl ON c.caller_id = cl.caller_id WHERE c.start_time::date = :d AND cl.is_spam = true"), {"d": today}).scalar() or 0
         return {
             "total_calls_today": t,
             "blocked_calls_count": b,
@@ -74,6 +74,7 @@ def dashboard(db: Session = Depends(get_db)):
         }
 
 @router.post("/api/login")
+@router.post("/api/auth/login")
 def login(req: LoginRequest):
     return {
         "status": "success",
@@ -87,6 +88,7 @@ def login(req: LoginRequest):
     }
 
 @router.post("/api/register")
+@router.post("/api/auth/register")
 def register(req: RegisterRequest):
     return {
         "status": "success",

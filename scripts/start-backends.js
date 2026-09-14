@@ -35,19 +35,20 @@ LEGACY_PORTS.forEach((p) => freePort(p));
 
 if (fs.existsSync(callerBackendDir)) {
   try {
-    const isWin = process.platform === 'win32';
-    if (isWin) {
-      execSync('start "" /min python run_server.py', {
+    if (process.platform === 'win32') {
+      const child = spawn('cmd.exe', ['/c', 'start', '""', '/min', 'python', 'run_server.py'], {
         cwd: callerBackendDir,
-        stdio: 'ignore',
-      });
-    } else {
-      const child = spawn('python3', ['run_server.py'], {
-        cwd: callerBackendDir,
-        shell: false,
         detached: true,
         stdio: 'ignore',
       });
+      child.unref();
+    } else {
+      const child = spawn('python3', ['run_server.py'], {
+        cwd: callerBackendDir,
+        detached: true,
+        stdio: 'ignore',
+      });
+      child.unref();
       child.on('error', (err) => {
         console.warn(`⚠️ [Unified Backend] notice: ${err.message}`);
       });

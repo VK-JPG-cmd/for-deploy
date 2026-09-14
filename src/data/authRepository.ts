@@ -1,24 +1,43 @@
 
 import { saveAuthSession } from '../utils/authStorage';
-import { getAuthBaseUrl } from '../config/apiConfig';
+import { getAuthBaseUrl, getFallbackUrls, setResolvedHost } from '../config/apiConfig';
 import { Storage } from '../utils/storage';
 
 const getBaseUrl = () => getAuthBaseUrl();
 
-async function fetchWithTimeout(url: string, options: any, timeout = 5000): Promise<Response> {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    clearTimeout(id);
-    return response;
-  } catch (error) {
-    clearTimeout(id);
-    throw error;
+async function fetchWithTimeout(urlPath: string, options: any, timeout = 4000): Promise<Response> {
+  // If urlPath is already an absolute URL, try it first, then try fallbacks
+  const path = urlPath.startsWith('http') ? new URL(urlPath).pathname : urlPath;
+  const urlsToTry = urlPath.startsWith('http')
+    ? [urlPath, ...getFallbackUrls().map(f => `${f}${path}`)]
+    : getFallbackUrls().map(f => `${f}${path}`);
+
+  // Deduplicate URLs
+  const uniqueUrls = Array.from(new Set(urlsToTry));
+
+  let lastError: any = null;
+  for (const url of uniqueUrls) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(id);
+      if (response) {
+        // Save the working host for all subsequent requests
+        const origin = new URL(url).origin;
+        setResolvedHost(origin);
+        return response;
+      }
+    } catch (err) {
+      clearTimeout(id);
+      lastError = err;
+    }
   }
+
+  throw lastError || new Error('Server unreachable');
 }
 
 export interface LoginPayload {

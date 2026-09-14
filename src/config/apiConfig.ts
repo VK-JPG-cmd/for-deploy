@@ -24,16 +24,26 @@ const getHostFromExpo = (): string | null => {
 
 
 const expoIp = getHostFromExpo();
-const DEFAULT_HOST = expoIp || (Platform.OS === 'android' ? '10.0.2.2' : '127.0.0.1');
+export const DEFAULT_HOST = expoIp || '127.0.0.1';
+const CANDIDATE_HOSTS = [DEFAULT_HOST, '127.0.0.1', '10.201.126.62', '10.0.2.2'];
 const DEFAULT_PORT = '5000';
 
 let customBaseUrl: string | null = null;
+let resolvedWorkingBaseUrl: string = `http://${DEFAULT_HOST}:${DEFAULT_PORT}`;
 
 export const getUnifiedBaseUrl = (): string => {
   if (customBaseUrl) {
     return customBaseUrl;
   }
-  return `http://${DEFAULT_HOST}:${DEFAULT_PORT}`;
+  return resolvedWorkingBaseUrl;
+};
+
+export const getFallbackUrls = (): string[] => {
+  return CANDIDATE_HOSTS.map(h => `http://${h}:${DEFAULT_PORT}`);
+};
+
+export const setResolvedHost = (url: string) => {
+  resolvedWorkingBaseUrl = url.replace(/\/+$/, '');
 };
 
 export const getParentalBaseUrl = (): string => {

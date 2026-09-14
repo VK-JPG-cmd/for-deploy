@@ -220,8 +220,11 @@ export function useParentalControl() {
     if (isOnline) {
       try {
         let childList = await ParentalRepository.listChildren();
+        if (!Array.isArray(childList)) {
+          childList = (childList as any)?.data || (childList as any)?.children || [];
+        }
 
-        const mappedChildren = childList.map((c: any, index: number) => ({
+        const mappedChildren = (Array.isArray(childList) ? childList : []).map((c: any, index: number) => ({
           id: c.id,
           name: c.name,
           age: c.age,

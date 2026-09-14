@@ -1,6 +1,6 @@
 # ====================================================================
 # Standalone PostgreSQL Backend Server Launcher
-# Database Target: aepttas_xdr @ 100.112.49.39:5432  (schema: apt)
+# Database Target: aepttas_xdr @ dpg-dail4sh5efls73dvr100-a.oregon-postgres.render.com:5432  (schema: apt)
 # Table: apt.apt_users_b
 # Port: 8002
 # ====================================================================
@@ -29,7 +29,7 @@ def verify_password(password: str, hashed: str) -> bool:
         return False
 
 # 1. Database Connection URL
-DATABASE_URL = "postgresql+asyncpg://apt_parentctrl_app:Par%40intern_aepttas@100.112.49.39:5432/aepttas_xdr"
+DATABASE_URL = "postgresql+asyncpg://apt_auth_app:Auth@intern_aepttas@100.112.49.39:5432/aepttas_xdr"
 
 connect_args = {
     "server_settings": {"search_path": "apt"}
@@ -79,7 +79,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_db():
-    print("[PostgreSQL] Connecting to aepttas_xdr @ 100.112.49.39:5432 (schema: apt)...")
+    print("[PostgreSQL] Connecting to aepttas_xdr @ Render Cloud DB (schema: apt)...")
     # We do NOT call create_all here — the real table already exists in the DB
     # Just verify connectivity
     async with engine.connect() as conn:

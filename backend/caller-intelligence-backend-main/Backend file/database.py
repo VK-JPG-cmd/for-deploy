@@ -12,23 +12,26 @@ Base = declarative_base()
 # 🔐 DATABASE CREDENTIALS
 # ============================================
 
-TAILSCALE_IP = "100.112.49.39"
-DB_PORT = "5432"
-DB_NAME = "aepttas_xdr"
-DB_SCHEMA = "apt"
-DB_USER = "apt_callmgmt_app"
-DB_PASSWORD = "Call@intern_aepttas"
+TAILSCALE_IP = os.getenv("DB_HOST", "dpg-dail4sh5efls73dvr100-a.oregon-postgres.render.com")
+DB_HOST = TAILSCALE_IP
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME", "aepttas_xdr")
+DB_SCHEMA = os.getenv("DB_SCHEMA", "apt")
+DB_USER = os.getenv("DB_USER", "apt_callmgmt_app")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "Call@intern_aepttas")
 
 # ============================================
 # 🔗 URL-ENCODE PASSWORD
 # ============================================
-
 encoded_password = urllib.parse.quote_plus(DB_PASSWORD)
 
-# ✅ CHANGE THIS: Use psycopg2 (NOT asyncpg)
-DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{encoded_password}@{TAILSCALE_IP}:{DB_PORT}/{DB_NAME}"
+# Render Cloud PostgreSQL URL
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    f"postgresql+psycopg2://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
+)
 
-print(f"Connecting to: {DB_USER}@{TAILSCALE_IP}:{DB_PORT}/{DB_NAME}")
+print(f"Connecting to: {DB_USER}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
 # ============================================
 # 🏗️ ENGINE & SESSION
@@ -40,7 +43,12 @@ engine = create_engine(
     echo=False,
     pool_size=10,
     max_overflow=20,
-    connect_args={'connect_timeout': 2} # Fail fast if DB offline
+    connect_args={
+        'connect_timeout': 5,
+        'sslmode': 'require',
+        'channel_binding': 'disable',
+        'options': f'-c search_path={DB_SCHEMA},public'
+    }
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

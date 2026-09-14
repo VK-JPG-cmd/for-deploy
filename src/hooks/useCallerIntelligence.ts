@@ -63,13 +63,19 @@ export function useCallerIntelligence(childId: string = '1') {
 
   const fetchFromBackendDB = useCallback(async () => {
     try {
-      const res = await fetch(`${getCallerBaseUrl()}/api/caller-intel/${childId}`);
-      if (res.ok) {
-        const data = await res.json();
+      const baseUrl = getCallerBaseUrl();
+      const [intelRes, callsRes, spamRes] = await Promise.allSettled([
+        fetch(`${baseUrl}/api/caller-intel/${childId}`),
+        fetch(`${baseUrl}/api/calls`),
+        fetch(`${baseUrl}/api/spam-log`)
+      ]);
+
+      if (intelRes.status === 'fulfilled' && intelRes.value.ok) {
+        const data = await intelRes.value.json();
         if (Array.isArray(data.blockedNumbers) && data.blockedNumbers.length > 0) {
           setBlockedNumbers(data.blockedNumbers);
         }
-        if (Array.isArray(data.reportHistory)) {
+        if (Array.isArray(data.reportHistory) && data.reportHistory.length > 0) {
           setReportHistory(data.reportHistory);
         }
         if (typeof data.autoBlockEnabled === 'boolean') {
@@ -78,8 +84,37 @@ export function useCallerIntelligence(childId: string = '1') {
         if (typeof data.notificationsEnabled === 'boolean') {
           setNotificationsEnabled(data.notificationsEnabled);
         }
-        return;
       }
+
+      if (callsRes.status === 'fulfilled' && callsRes.value.ok) {
+        const callsData = await callsRes.value.json();
+        if (Array.isArray(callsData) && callsData.length > 0) {
+          const mappedCalls: MockCall[] = callsData.map((c: any) => ({
+            name: c.caller_name || 'Unknown Caller',
+            number: c.caller_number || '',
+            riskScore: c.risk_score || 0,
+            type: c.risk_score >= 80 ? 'Spam' : (c.risk_score > 40 ? 'Suspicious' : 'Normal'),
+            carrier: 'Cellular Network',
+            location: 'India',
+            frequency: 'Recent Call',
+          }));
+          setCallHistory(mappedCalls);
+        }
+      }
+
+      if (spamRes.status === 'fulfilled' && spamRes.value.ok) {
+        const spamData = await spamRes.value.json();
+        if (Array.isArray(spamData) && spamData.length > 0) {
+          const mappedSpam: SpamCall[] = spamData.map((s: any) => ({
+            name: s.caller_name || 'Reported Spam',
+            number: s.phone_number || '',
+            riskScore: s.risk_score || 85,
+            date: s.reported_at ? new Date(s.reported_at).toLocaleString() : 'Recent',
+          }));
+          setSpamCalls(mappedSpam);
+        }
+      }
+      return;
     } catch (e) {
       console.warn('Caller Intel backend fetch failed, using local storage fallback:', e);
     }

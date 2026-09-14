@@ -121,10 +121,10 @@ export function useApkScanner() {
         ]);
 
         setDashboardMetrics(metrics);
-        setScans(allScans);
-        setQuarantinedFiles(allQuarantine);
-        setHistoryLogs(allHistory);
-        setActiveAlert(alerts.length > 0 ? alerts[0] : null);
+        setScans(Array.isArray(allScans) ? allScans : ((allScans as any)?.data ?? []));
+        setQuarantinedFiles(Array.isArray(allQuarantine) ? allQuarantine : ((allQuarantine as any)?.data ?? []));
+        setHistoryLogs(Array.isArray(allHistory) ? allHistory : ((allHistory as any)?.data ?? []));
+        setActiveAlert(Array.isArray(alerts) && alerts.length > 0 ? alerts[0] : null);
         return;
       } catch {
         // Fall through to local

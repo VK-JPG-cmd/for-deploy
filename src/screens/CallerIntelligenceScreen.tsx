@@ -19,6 +19,7 @@ import { useAppTheme } from '../contexts/ThemeContext';
 import { colors } from '../styles/theme';
 import { Icon } from '../components/Icon';
 import { useCallerIntelligence } from '../hooks/useCallerIntelligence';
+import { getCallerBaseUrl } from '../config/apiConfig';
 
 interface MockCall {
   name: string;
@@ -98,6 +99,10 @@ export const CallerIntelligenceScreen: React.FC<CallerIntelligenceScreenProps> =
   const [showHighRiskAlert, setShowHighRiskAlert] = useState(false);
   const [showBlockConfirmation, setShowBlockConfirmation] = useState(false);
   const [showReportPopup, setShowReportPopup] = useState(false);
+  const [showCustomBlockModal, setShowCustomBlockModal] = useState(false);
+  const [customBlockNumber, setCustomBlockNumber] = useState('');
+  const [customBlockName, setCustomBlockName] = useState('');
+  const [customBlockReason, setCustomBlockReason] = useState('');
 
   // Temp reporting variables
   const [reportType, setReportType] = useState('Robocall / Telemarketing');
@@ -112,8 +117,22 @@ export const CallerIntelligenceScreen: React.FC<CallerIntelligenceScreenProps> =
     }
   };
 
-  const handleSimulateCall = (call: MockCall) => {
+  const handleSimulateCall = async (call: MockCall) => {
     setActiveSimulatedCall(call);
+    try {
+      await fetch(`${getCallerBaseUrl()}/api/live-call/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caller_number: call.number,
+          caller_name: call.name,
+          call_type: call.type === 'Normal' ? 'INCOMING' : (call.type === 'Spam' || call.type === 'Scam' ? 'BLOCKED' : 'INCOMING'),
+          duration: Math.floor(Math.random() * 60) + 15,
+        }),
+      });
+    } catch (e) {
+      console.warn('Live call analyze error:', e);
+    }
     if (call.type === 'Spam') {
       setShowSpamWarning(true);
     } else if (call.type === 'Scam') {
@@ -123,31 +142,37 @@ export const CallerIntelligenceScreen: React.FC<CallerIntelligenceScreenProps> =
     }
   };
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (searchQuery.trim().length > 0) {
-      const db: MockCall[] = [
-        { name: 'Leo (Family)', number: '+1 (555) 019-2831', riskScore: 2, type: 'Normal', carrier: 'AT&T', location: 'San Jose, CA', frequency: '12 calls/week' },
-        { name: 'IRS Impostor', number: '+1 (866) 492-3001', riskScore: 98, type: 'Scam', carrier: 'VoIP Provider', location: 'Washington DC, USA', frequency: '88 calls/week' },
-        { name: 'Prize Sweepstakes Fraud', number: '+1 (800) 999-5566', riskScore: 95, type: 'High-Risk', carrier: 'CenturyLink', location: 'Miami, FL', frequency: '150 calls/week' },
-        { name: 'Suspected Robodialer', number: '+1 (202) 555-0143', riskScore: 85, type: 'Spam', carrier: 'Level 3 Telecom', location: 'Seattle, WA', frequency: '45 calls/week' }
-      ];
-
       const cleanQuery = searchQuery.trim().replace(/\D/g, '');
-      const found = db.find(c => c.number.replace(/\D/g, '').includes(cleanQuery));
-
-      if (found) {
-        setSearchResult(found);
-      } else {
-        setSearchResult({
-          name: 'Unknown Caller',
-          number: searchQuery,
-          riskScore: 50,
-          type: 'Normal',
-          carrier: 'Unknown Carrier',
-          location: 'Unknown Location',
-          frequency: '1 call/week'
-        });
+      try {
+        const res = await fetch(`${getCallerBaseUrl()}/api/callers/lookup/${encodeURIComponent(cleanQuery || searchQuery.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResult({
+            name: data.caller_name || 'Shield Identified',
+            number: searchQuery,
+            riskScore: data.risk_score || (data.is_spam ? 85 : 15),
+            type: data.is_spam ? 'Spam' : (data.risk_score > 50 ? 'Suspicious' : 'Normal'),
+            carrier: data.carrier || 'Cellular Network',
+            location: data.location || 'India',
+            frequency: `${data.total_reports || 0} network reports`
+          });
+          return;
+        }
+      } catch (e) {
+        console.warn('Backend search error:', e);
       }
+
+      setSearchResult({
+        name: 'Unknown Caller',
+        number: searchQuery,
+        riskScore: 50,
+        type: 'Normal',
+        carrier: 'Unknown Carrier',
+        location: 'Unknown Location',
+        frequency: '1 call/week'
+      });
     }
   };
 
@@ -628,7 +653,20 @@ export const CallerIntelligenceScreen: React.FC<CallerIntelligenceScreenProps> =
               </View>
             ))}
 
-            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>BLOCKED TELEPHONY REGISTRY</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12 }}>
+              <Text style={[styles.sectionTitle, { marginTop: 0, marginBottom: 0 }]}>BLOCKED TELEPHONY REGISTRY</Text>
+              <TouchableOpacity
+                style={{ backgroundColor: colors.redDanger, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                onPress={() => {
+                  setCustomBlockNumber('');
+                  setCustomBlockName('');
+                  setCustomBlockReason('');
+                  setShowCustomBlockModal(true);
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>+ Block Number</Text>
+              </TouchableOpacity>
+            </View>
             {blockedNumbers.map((blocked, idx) => (
               <View key={idx} style={styles.blockedRow}>
                 <View style={{ flex: 1 }}>
@@ -929,6 +967,66 @@ export const CallerIntelligenceScreen: React.FC<CallerIntelligenceScreenProps> =
                 </View>
               </>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* POPUP 6: MANUAL BLOCK NUMBER MODAL */}
+      <Modal transparent={true} visible={showCustomBlockModal} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { borderColor: colors.redDanger }]}>
+            <Text style={styles.popupTitle}>Block Phone Number</Text>
+            <Text style={styles.popupDesc}>Enter a phone number to blacklist in the cloud database.</Text>
+
+            <TextInput
+              style={[styles.reportInput, { height: 44, marginBottom: 10 }]}
+              placeholder="Phone Number (e.g. +1 555-0199)"
+              placeholderTextColor={colors.textMuted}
+              value={customBlockNumber}
+              onChangeText={setCustomBlockNumber}
+              keyboardType="phone-pad"
+            />
+
+            <TextInput
+              style={[styles.reportInput, { height: 44, marginBottom: 10 }]}
+              placeholder="Caller Name (e.g. Loan Telemarketer)"
+              placeholderTextColor={colors.textMuted}
+              value={customBlockName}
+              onChangeText={setCustomBlockName}
+            />
+
+            <TextInput
+              style={[styles.reportInput, { height: 44, marginBottom: 16 }]}
+              placeholder="Block Reason (e.g. Unwanted spam calls)"
+              placeholderTextColor={colors.textMuted}
+              value={customBlockReason}
+              onChangeText={setCustomBlockReason}
+            />
+
+            <View style={styles.popupActions}>
+              <TouchableOpacity style={styles.popupTextBtn} onPress={() => setShowCustomBlockModal(false)}>
+                <Text style={styles.popupTextBtnText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.popupBtn, { backgroundColor: colors.redDanger }]}
+                onPress={() => {
+                  if (!customBlockNumber.trim()) {
+                    showToast('Please enter a valid phone number');
+                    return;
+                  }
+                  addBlockedNumber(
+                    customBlockNumber.trim(),
+                    customBlockName.trim() || 'Blocked Number',
+                    customBlockReason.trim() || 'Manual Block from UI'
+                  );
+                  showToast(`Blocked ${customBlockNumber.trim()} in DB!`);
+                  setShowCustomBlockModal(false);
+                }}
+              >
+                <Text style={styles.popupBtnText}>Block & Save</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

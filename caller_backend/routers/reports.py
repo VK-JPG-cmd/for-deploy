@@ -22,7 +22,7 @@ def ensure_user(db: Session):
         user = db.execute(text("SELECT user_id FROM apt.apt_users_b WHERE user_id = 1")).first()
         if not user:
             db.execute(
-                text("INSERT INTO apt.apt_users_b (user_id, user_uuid, username, email, password_hash, created_by, created_date, last_updated_by, last_updated_date, last_dml_by, last_dml_date, last_ddl_by, last_ddl_date, program_id) VALUES (1, :u, 'admin', 'admin@shield.com', 'none', 'SYSTEM', now(), 'SYSTEM', now(), 'SYSTEM', now(), 'SYSTEM', now(), 1)"),
+                text("INSERT INTO apt.apt_users_b (user_id, user_uuid, username, email, password_hash, created_by, created_date, last_updated_by, last_updated_date) VALUES (1, :u, 'admin', 'admin@shield.com', 'none', 'SYSTEM', now(), 'SYSTEM', now())"),
                 {"u": str(uuid.uuid4())}
             )
             db.commit()
@@ -64,11 +64,29 @@ def add_report(req: ReportRequest, child_id: str = "1", db: Session = Depends(ge
         cid = caller[0] if caller else None
         if not cid:
             p = get_audit({"n": num, "nm": "Unknown Caller"})
-            res = db.execute(text("INSERT INTO apt.apt_callers_b (caller_uuid, phone_number, caller_name, created_by, created_date, last_updated_by, last_updated_date, last_dml_by, last_dml_date, last_ddl_by, last_ddl_date, program_id) VALUES (:uuid, :n, :nm, :by, :dt, :by, :dt, :by, :dt, :by, :dt, :prog) RETURNING caller_id"), p)
+            res = db.execute(text("INSERT INTO apt.apt_callers_b (caller_uuid, phone_number, caller_name, created_by, created_date, last_updated_by, last_updated_date) VALUES (:uuid, :n, :nm, :by, :dt, :by, :dt) RETURNING caller_id"), p)
             cid = res.scalar()
 
-        rp = get_audit({"cid": cid, "num": num, "reason": req.report_reason or "Reported by user"})
-        db.execute(text("INSERT INTO apt.apt_reports_b (report_uuid, user_id, caller_id, phone_number, report_reason, created_by, created_date, last_updated_by, last_updated_date, last_dml_by, last_dml_date, last_ddl_by, last_ddl_date) VALUES (:uuid, 1, :cid, :num, :reason, :by, :dt, :by, :dt, :by, :dt, :by, :dt)"), rp)
+        rp = {
+            "uuid": str(uuid.uuid4()),
+            "cid": cid,
+            "num": num,
+            "reason": req.report_reason or "Reported by user",
+            "by": "MOBILE_APP",
+            "dt": datetime.now(),
+            "prog": 1
+        }
+        db.execute(text("""
+            INSERT INTO apt.apt_reports_b (
+                report_uuid, user_id, caller_id, phone_number, report_reason,
+                created_by, created_date, last_updated_by, last_updated_date,
+                last_dml_by, last_dml_date, last_ddl_by, last_ddl_date, program_id
+            ) VALUES (
+                :uuid, 1, :cid, :num, :reason,
+                :by, :dt, :by, :dt,
+                :by, :dt, :by, :dt, :prog
+            )
+        """), rp)
         db.commit()
         return {"status": "success", "message": "Report logged successfully"}
     except Exception as e:

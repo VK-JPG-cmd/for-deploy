@@ -28,9 +28,9 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 
 def ensure_user(db: Session):
     try:
-        user = db.execute(text("SELECT user_id FROM apt.apt_users_b WHERE user_id = 1")).first()
+        user = db.execute(text("SELECT user_id FROM apt.apt_users_b LIMIT 1")).first()
         if not user:
-            db.execute(text("INSERT INTO apt.apt_users_b (user_id, user_uuid, username, email, password_hash, created_by, created_date, last_updated_by, last_updated_date, last_dml_by, last_dml_date, last_ddl_by, last_ddl_date, program_id) VALUES (1, :u, 'admin', 'admin@shield.com', 'none', 'SYSTEM', now(), 'SYSTEM', now(), 'SYSTEM', now(), 'SYSTEM', now(), 1)"), {"u": str(uuid.uuid4())})
+            db.execute(text("INSERT INTO apt.apt_users_b (user_uuid, username, email, password_hash, is_active, created_by, created_date, last_updated_by, last_updated_date) VALUES (:u, 'admin', 'admin@shield.com', 'none', true, 'SYSTEM', now(), 'SYSTEM', now())"), {"u": str(uuid.uuid4())})
             db.commit()
     except: db.rollback()
 
@@ -147,7 +147,7 @@ def dashboard(db: Session = Depends(get_db)):
 @app.get("/api/blocked-numbers")
 def get_blocked(db: Session = Depends(get_db)):
     try:
-        res = db.execute(text("SELECT b.phone_number, COALESCE(c.caller_name, 'Unknown'), b.reason, b.blocked_date FROM apt.apt_blocked_numbers_b b LEFT JOIN apt.apt_callers_b c ON RIGHT(b.phone_number, 10) = RIGHT(c.phone_number, 10) ORDER BY b.blocked_date DESC")).fetchall()
+        res = db.execute(text("SELECT b.phone_number, COALESCE(c.caller_name, 'Unknown'), b.reason, b.created_date FROM apt.apt_blocked_numbers_b b LEFT JOIN apt.apt_callers_b c ON RIGHT(b.phone_number, 10) = RIGHT(c.phone_number, 10) ORDER BY b.created_date DESC")).fetchall()
         return [{"phone_number": r[0], "caller_name": r[1], "block_reason": r[2], "block_date": str(r[3]), "risk_score": 100} for r in res]
     except: return []
 
@@ -160,17 +160,22 @@ def add_block(req: BlockNumberRequest, db: Session = Depends(get_db)):
         caller = db.execute(text("SELECT caller_id FROM apt.apt_callers_b WHERE RIGHT(phone_number, 10) = RIGHT(:n, 10)"), {"n": num}).first()
         cid = caller[0] if caller else None
         if not cid:
-            p = get_audit({"n": num, "nm": req.caller_name or "Unknown"})
-            res = db.execute(text("INSERT INTO apt.apt_callers_b (caller_uuid, phone_number, caller_name, created_by, created_date, last_updated_by, last_updated_date, last_dml_by, last_dml_date, last_ddl_by, last_ddl_date, program_id) VALUES (:uuid, :n, :nm, :by, :dt, :by, :dt, :by, :dt, :by, :dt, :prog) RETURNING caller_id"), p)
+            p = {"uuid": str(uuid.uuid4()), "n": num, "nm": req.caller_name or "Unknown", "by": "MOBILE_APP", "dt": datetime.now()}
+            res = db.execute(text("INSERT INTO apt.apt_callers_b (caller_uuid, phone_number, caller_name, created_by, created_date, last_updated_by, last_updated_date) VALUES (:uuid, :n, :nm, :by, :dt, :by, :dt) RETURNING caller_id"), p)
             cid = res.scalar()
 
         exists = db.execute(text("SELECT 1 FROM apt.apt_blocked_numbers_b WHERE phone_number = :n"), {"n": num}).first()
-        bp = get_audit({"cid": cid, "num": num, "reason": req.block_reason or "Manual"})
-        if exists: db.execute(text("UPDATE apt.apt_blocked_numbers_b SET reason = :reason, last_dml_date = :dt WHERE phone_number = :num"), bp)
-        else: db.execute(text("INSERT INTO apt.apt_blocked_numbers_b (blocked_number_uuid, user_id, caller_id, phone_number, reason, created_by, created_date, last_updated_by, last_updated_date, last_dml_by, last_dml_date, last_ddl_by, last_ddl_date) VALUES (:uuid, 1, :cid, :num, :reason, :by, :dt, :by, :dt, :by, :dt, :by, :dt)"), bp)
-        db.commit(); return {"status": "success"}
+        bp = {"num": num, "reason": req.block_reason or "Manual", "by": "MOBILE_APP", "dt": datetime.now()}
+        if exists:
+            db.execute(text("UPDATE apt.apt_blocked_numbers_b SET reason = :reason, last_updated_date = :dt, last_updated_by = :by WHERE phone_number = :num"), bp)
+        else:
+            db.execute(text("INSERT INTO apt.apt_blocked_numbers_b (user_id, phone_number, reason, created_by, created_date, last_updated_by, last_updated_date) VALUES (1, :num, :reason, :by, :dt, :by, :dt)"), bp)
+        db.commit()
+        return {"status": "success"}
     except Exception as e:
-        db.rollback(); logger.error(traceback.format_exc()); raise HTTPException(status_code=500)
+        db.rollback()
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/blocked/{phone}")
 def delete_block(phone: str, db: Session = Depends(get_db)):

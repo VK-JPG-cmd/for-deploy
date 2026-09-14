@@ -10,7 +10,7 @@ load_dotenv()
 # 1. Load DATABASE_URL from environment variable
 raw_db_url = os.getenv(
     "DATABASE_URL",
-    "postgresql+asyncpg://apt_parentctrl_app:Par%40intern_aepttas@100.112.49.39:5432/aepttas_xdr"
+    "postgresql+asyncpg://apt_parentctrl_app:Par%40intern_aepttas@127.0.0.1:5432/aepttas_xdr"
 )
 
 # Safely handle unescaped '@' symbol in password
@@ -25,7 +25,7 @@ connect_args = {
     "command_timeout": 5.0,  # 5s individual query execution timeout
 }
 
-if "neon.tech" in DATABASE_URL:
+if "neon.tech" in DATABASE_URL or "render.com" in DATABASE_URL:
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE

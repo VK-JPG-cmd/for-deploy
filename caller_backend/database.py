@@ -12,7 +12,7 @@ Base = declarative_base()
 # ============================================
 # 🔐 DATABASE CONFIGURATION
 # ============================================
-TAILSCALE_IP = os.getenv("DB_HOST", "100.112.49.39")
+TAILSCALE_IP = os.getenv("DB_HOST", "dpg-dail4sh5efls73dvr100-a.oregon-postgres.render.com")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "aepttas_xdr")
 DB_SCHEMA = os.getenv("DB_SCHEMA", "apt")
@@ -23,12 +23,14 @@ encoded_password = urllib.parse.quote_plus(DB_PASSWORD)
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    f"postgresql+psycopg2://{DB_USER}:{encoded_password}@{TAILSCALE_IP}:{DB_PORT}/{DB_NAME}"
+    f"postgresql+psycopg2://{DB_USER}:{encoded_password}@{TAILSCALE_IP}:{DB_PORT}/{DB_NAME}?sslmode=require"
 )
 
-# Connect args with timeout to prevent hanging if VPN / remote DB is temporarily offline
+# Connect args with timeout and SSL settings for cloud database (Render / AWS)
 connect_args = {
-    "connect_timeout": 3,
+    "connect_timeout": 5,
+    "sslmode": "require",
+    "channel_binding": "disable",
     "options": f"-c search_path={DB_SCHEMA},public"
 }
 

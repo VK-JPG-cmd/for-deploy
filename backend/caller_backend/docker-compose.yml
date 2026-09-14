@@ -9,7 +9,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - DB_HOST=100.112.49.39
+      - DB_HOST=127.0.0.1
       - DB_PORT=5432
       - DB_NAME=aepttas_xdr
       - DB_SCHEMA=apt

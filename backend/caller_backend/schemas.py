@@ -23,13 +23,20 @@ class CallAnalyzeRequest(BaseModel):
     user_id: Optional[int] = 1
 
 class BlockNumberRequest(BaseModel):
-    phone_number: str
-    caller_name: Optional[str] = None
-    block_reason: Optional[str] = "Blocked by user"
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+    phone_number: Optional[str] = Field(default=None, alias="number")
+    caller_name: Optional[str] = Field(default=None, alias="name")
+    block_reason: Optional[str] = Field(default="Blocked by user", alias="reason")
+
+    @property
+    def clean_phone(self) -> str:
+        return self.phone_number or ""
 
 class ReportRequest(BaseModel):
-    caller_number: str
-    report_reason: Optional[str] = "Reported by user"
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+    caller_number: Optional[str] = Field(default=None, alias="number")
+    report_reason: Optional[str] = Field(default="Reported by user", alias="description")
+    report_type: Optional[str] = Field(default=None, alias="type")
     call_id: Optional[int] = None
 
 class SettingsUpdateRequest(BaseModel):
