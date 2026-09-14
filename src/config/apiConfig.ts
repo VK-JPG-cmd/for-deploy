@@ -23,13 +23,14 @@ const getHostFromExpo = (): string | null => {
 };
 
 
+export const PRODUCTION_URL = 'https://aepttas-backend.onrender.com';
 const expoIp = getHostFromExpo();
 export const DEFAULT_HOST = expoIp || '127.0.0.1';
-const CANDIDATE_HOSTS = [DEFAULT_HOST, '127.0.0.1', '10.201.126.62', '10.0.2.2'];
+const CANDIDATE_HOSTS = [PRODUCTION_URL, DEFAULT_HOST, '127.0.0.1', '10.201.126.62', '10.0.2.2'];
 const DEFAULT_PORT = '5000';
 
 let customBaseUrl: string | null = null;
-let resolvedWorkingBaseUrl: string = `http://${DEFAULT_HOST}:${DEFAULT_PORT}`;
+let resolvedWorkingBaseUrl: string = PRODUCTION_URL;
 
 export const getUnifiedBaseUrl = (): string => {
   if (customBaseUrl) {
@@ -39,7 +40,10 @@ export const getUnifiedBaseUrl = (): string => {
 };
 
 export const getFallbackUrls = (): string[] => {
-  return CANDIDATE_HOSTS.map(h => `http://${h}:${DEFAULT_PORT}`);
+  return [
+    PRODUCTION_URL,
+    ...CANDIDATE_HOSTS.filter(h => h !== PRODUCTION_URL).map(h => `http://${h}:${DEFAULT_PORT}`)
+  ];
 };
 
 export const setResolvedHost = (url: string) => {
