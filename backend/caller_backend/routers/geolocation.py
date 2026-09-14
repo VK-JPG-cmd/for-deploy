@@ -113,6 +113,26 @@ async def store_location(location: LocationData, request: Request, db: Session =
             "address": "Koramangala, Bengaluru, Karnataka"
         }
 
+        # Persist to cloud database
+        try:
+            db.execute(text("""
+                INSERT INTO apt.apt_location_records_b (
+                    child_id, latitude, longitude, accuracy_meters, recorded_at, created_by, created_date, last_updated_by, last_updated_date
+                ) VALUES (
+                    1, :lat, :lon, :acc, :rec, 'MOBILE_APP', :dt, 'MOBILE_APP', :dt
+                )
+            """), {
+                "lat": location.latitude,
+                "lon": location.longitude,
+                "acc": location.accuracy or 10.0,
+                "rec": datetime.now(timezone.utc),
+                "dt": datetime.now(timezone.utc)
+            })
+            db.commit()
+        except Exception as db_err:
+            db.rollback()
+            logger.warning(f"Location record DB insert error: {db_err}")
+
         cached_locations.insert(0, res_data)
         if len(cached_locations) > 200:
             cached_locations.pop()
@@ -129,6 +149,31 @@ async def store_location(location: LocationData, request: Request, db: Session =
 @router.get("/api/v1/geolocation/current")
 @router.get("/api/geo/current")
 async def get_live_location(db: Session = Depends(get_db)):
+    try:
+        row = db.execute(text("""
+            SELECT location_id, latitude, longitude, accuracy_meters, recorded_at
+            FROM apt.apt_location_records_b
+            ORDER BY location_id DESC
+            LIMIT 1
+        """)).first()
+        if row:
+            return {
+                "status": "success",
+                "data": {
+                    "record_id": row[0],
+                    "latitude": float(row[1]),
+                    "longitude": float(row[2]),
+                    "accuracy": float(row[3]) if row[3] else 10.0,
+                    "timestamp": row[4].isoformat() if row[4] else datetime.now(timezone.utc).isoformat(),
+                    "is_spoofed": False,
+                    "city": "Bengaluru",
+                    "country": "India",
+                    "address": "Live Location from Cloud Database"
+                }
+            }
+    except Exception as e:
+        logger.warning(f"DB live location query error: {e}")
+
     if cached_locations:
         return {"status": "success", "data": cached_locations[0]}
     
