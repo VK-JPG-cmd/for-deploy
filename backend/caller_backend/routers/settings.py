@@ -1,8 +1,9 @@
 # caller_backend/routers/settings.py
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime, date
+import uuid
 import logging
 from database import get_db
 from schemas import SettingsUpdateRequest, LoginRequest, RegisterRequest
