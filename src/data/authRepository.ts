@@ -5,7 +5,7 @@ import { Storage } from '../utils/storage';
 
 const getBaseUrl = () => getAuthBaseUrl();
 
-async function fetchWithTimeout(urlPath: string, options: any, timeout = 4000): Promise<Response> {
+async function fetchWithTimeout(urlPath: string, options: any, timeout = 15000): Promise<Response> {
   // If urlPath is already an absolute URL, try it first, then try fallbacks
   const path = urlPath.startsWith('http') ? new URL(urlPath).pathname : urlPath;
   const urlsToTry = urlPath.startsWith('http')
@@ -179,7 +179,13 @@ export async function registerUser(payload: {
     } as AuthError;
   }
 
-  const data = await response.json();
+  let data: any = {};
+  try {
+    data = await response.json();
+  } catch {
+    const txt = await response.text().catch(() => '');
+    data = { detail: txt || 'Server error during registration.' };
+  }
 
   if (!response.ok) {
     if (response.status === 422 && Array.isArray(data.detail)) {
