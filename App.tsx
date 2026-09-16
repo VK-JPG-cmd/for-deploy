@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { StatusBar, StyleSheet, View, LogBox } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { StatusBar, StyleSheet, View, LogBox, BackHandler, ToastAndroid, Platform } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { colors } from './src/styles/theme';
@@ -60,7 +60,69 @@ function AppContent({ renderScreen }: { renderScreen: () => React.ReactNode }) {
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('DeviceRoleSelection');
+  const [screenStack, setScreenStack] = useState<ScreenName[]>(['DeviceRoleSelection']);
   const [signUpSuccessMessage, setSignUpSuccessMessage] = useState('');
+  const lastBackPressRef = useRef<number>(0);
+
+  const navigateTo = useCallback((screen: ScreenName, replace = false) => {
+    setCurrentScreen(screen);
+    setScreenStack(prev => {
+      if (replace) {
+        return [...prev.slice(0, -1), screen];
+      }
+      if (prev[prev.length - 1] === screen) {
+        return prev;
+      }
+      return [...prev, screen];
+    });
+  }, []);
+
+  const goBack = useCallback(() => {
+    setScreenStack(prev => {
+      if (prev.length > 1) {
+        const nextStack = [...prev];
+        nextStack.pop();
+        const prevScreen = nextStack[nextStack.length - 1];
+        setCurrentScreen(prevScreen);
+        return nextStack;
+      } else {
+        if (currentScreen !== 'Dashboard' && currentScreen !== 'DeviceRoleSelection' && currentScreen !== 'ChildMode') {
+          setCurrentScreen('Dashboard');
+          return ['Dashboard'];
+        }
+        return prev;
+      }
+    });
+  }, [currentScreen]);
+
+  // Android hardware & gesture back button handling
+  useEffect(() => {
+    const onHardwareBackPress = () => {
+      // If we are in sub-screens, navigate back rather than closing the app
+      if (
+        currentScreen !== 'Dashboard' &&
+        currentScreen !== 'DeviceRoleSelection' &&
+        currentScreen !== 'ChildMode'
+      ) {
+        goBack();
+        return true; // handled
+      }
+
+      // If on Dashboard or root screen, prompt before closing or double tap to exit
+      const now = Date.now();
+      if (now - lastBackPressRef.current < 2000) {
+        return false; // let the system exit
+      }
+      lastBackPressRef.current = now;
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
+      }
+      return true;
+    };
+
+    const backSub = BackHandler.addEventListener('hardwareBackPress', onHardwareBackPress);
+    return () => backSub.remove();
+  }, [currentScreen, goBack]);
 
   useEffect(() => {
     LogBox.ignoreAllLogs();
@@ -68,33 +130,37 @@ function App() {
       try {
         console.log('[App] Checking session on mount...');
         const token = await Storage.getAuthToken();
-        console.log('[App] Session check retrieved token:', token);
-        if (token) {
-          console.log('[Auth] Active session token found. Auto-routing to Dashboard.');
-          // Sync keys to TokenStorage using updated Storage wrappers
-          try {
-            await Storage.setAuthToken(token);
-            const profile = await Storage.getUserProfile();
-            if (profile) {
-              await Storage.setUserProfile(profile);
-            }
-          } catch (e) {
-            console.warn('[App] Failed to sync session keys on mount:', e);
+        const profile = await Storage.getUserProfile();
+        const role = await Storage.getAssignedRole();
+
+        if (token || profile) {
+          console.log('[Auth] Active session found. Auto-routing...');
+          if (role === 'CHILD') {
+            setCurrentScreen('ChildMode');
+            setScreenStack(['ChildMode']);
+            return;
           }
-          const userProfile = await Storage.getUserProfile();
-          if (userProfile && userProfile.user_id) {
-            const backendCheck = await ParentalRepository.checkParentLinked(userProfile.user_id);
-            if (backendCheck?.is_linked && backendCheck?.linked_child) {
-              await Storage.setLinkedChild(backendCheck.linked_child);
+
+          if (profile && profile.user_id) {
+            try {
+              const backendCheck = await ParentalRepository.checkParentLinked(profile.user_id);
+              if (backendCheck?.is_linked && backendCheck?.linked_child) {
+                await Storage.setLinkedChild(backendCheck.linked_child);
+              }
+            } catch (e) {
+              console.warn('[App] Backend link check failed during launch:', e);
             }
           }
           setCurrentScreen('Dashboard');
+          setScreenStack(['Dashboard']);
         } else {
           setCurrentScreen('DeviceRoleSelection');
+          setScreenStack(['DeviceRoleSelection']);
         }
       } catch (error) {
         console.error('[Auth] Session restoration check failed:', error);
         setCurrentScreen('DeviceRoleSelection');
+        setScreenStack(['DeviceRoleSelection']);
       }
     }
     checkLaunchGuard();
@@ -104,6 +170,7 @@ function App() {
     await Storage.clear();
     ChildDaemon.stopDaemon();
     setCurrentScreen('DeviceRoleSelection');
+    setScreenStack(['DeviceRoleSelection']);
   };
 
   const renderScreen = () => {
@@ -111,9 +178,9 @@ function App() {
       case 'DeviceRoleSelection':
         return (
           <DeviceRoleSelectionScreen
-            onSelectParent={() => setCurrentScreen('Login')}
-            onSelectChild={() => setCurrentScreen('ChildLink')}
-            onViewBindingCode={() => setCurrentScreen('TwoStepBinding')}
+            onSelectParent={() => navigateTo('Login')}
+            onSelectChild={() => navigateTo('ChildLink')}
+            onViewBindingCode={() => navigateTo('TwoStepBinding')}
           />
         );
       case 'Login':
@@ -122,15 +189,16 @@ function App() {
             onSignInSuccess={(isLinked, userEmail) => {
               setSignUpSuccessMessage('');
               if (userEmail === 'admin@gmail.com') {
-                setCurrentScreen('AdminLogs');
+                navigateTo('AdminLogs');
               } else {
                 setCurrentScreen('Dashboard');
+                setScreenStack(['Dashboard']);
               }
             }}
-            onSetUpChildDevice={() => setCurrentScreen('DeviceRoleSelection')}
+            onSetUpChildDevice={() => navigateTo('DeviceRoleSelection')}
             onGoToSignUp={() => {
               setSignUpSuccessMessage('');
-              setCurrentScreen('SignUp');
+              navigateTo('SignUp');
             }}
             signUpSuccessMessage={signUpSuccessMessage}
           />
@@ -138,8 +206,8 @@ function App() {
       case 'TwoStepBinding':
         return (
           <TwoStepBindingScreen
-            onBack={() => setCurrentScreen('Dashboard')}
-            onCheckStatus={() => setCurrentScreen('Dashboard')}
+            onBack={goBack}
+            onCheckStatus={() => navigateTo('Dashboard')}
           />
         );
       case 'SignUp':
@@ -147,11 +215,11 @@ function App() {
           <SignUpScreen
             onSignUpSuccess={() => {
               setSignUpSuccessMessage('Account created successfully! Please sign in.');
-              setCurrentScreen('Login');
+              navigateTo('Login', true);
             }}
             onGoToLogin={() => {
               setSignUpSuccessMessage('');
-              setCurrentScreen('Login');
+              navigateTo('Login', true);
             }}
           />
         );
@@ -159,55 +227,58 @@ function App() {
         return (
           <DashboardScreen
             onSignOut={handleSignOut}
-            onOpenGeoTracking={() => setCurrentScreen('GeoTracking')}
-            onOpenParentalControl={() => setCurrentScreen('ParentalControl')}
-            onOpenMalwareAnalysis={() => setCurrentScreen('MalwareAnalysis')}
-            onOpenCallerIntelligence={() => setCurrentScreen('CallerIntelligence')}
-            onOpenVulnerabilityDetection={() => setCurrentScreen('VulnerabilityDetection')}
-            onOpenChildDashboard={() => setCurrentScreen('ChildDashboard')}
+            onOpenGeoTracking={() => navigateTo('GeoTracking')}
+            onOpenParentalControl={() => navigateTo('ParentalControl')}
+            onOpenMalwareAnalysis={() => navigateTo('MalwareAnalysis')}
+            onOpenCallerIntelligence={() => navigateTo('CallerIntelligence')}
+            onOpenVulnerabilityDetection={() => navigateTo('VulnerabilityDetection')}
+            onOpenChildDashboard={() => navigateTo('ChildDashboard')}
           />
         );
       case 'GeoTracking':
-        return <GeoTrackingScreen onBack={() => setCurrentScreen('Dashboard')} />;
+        return <GeoTrackingScreen onBack={goBack} />;
       case 'ParentalControl':
         return (
           <ParentalControlScreen
-            onBack={() => setCurrentScreen('Dashboard')}
+            onBack={goBack}
             onSignOut={handleSignOut}
           />
         );
       case 'MalwareAnalysis':
-        return <MalwareAnalysisScreen onBack={() => setCurrentScreen('Dashboard')} />;
+        return <MalwareAnalysisScreen onBack={goBack} />;
       case 'CallerIntelligence':
-        return <CallerIntelligenceScreen onBack={() => setCurrentScreen('Dashboard')} />;
+        return <CallerIntelligenceScreen onBack={goBack} />;
       case 'VulnerabilityDetection':
-        return <VulnerabilityDetectionScreen onBack={() => setCurrentScreen('Dashboard')} />;
+        return <VulnerabilityDetectionScreen onBack={goBack} />;
       case 'ChildDashboard':
-        return <ChildDashboardScreen onBack={() => setCurrentScreen('Dashboard')} />;
+        return <ChildDashboardScreen onBack={goBack} />;
       case 'ChildLink':
         return (
           <ChildLinkScreen
-            onBack={() => setCurrentScreen('DeviceRoleSelection')}
-            onLinkSuccess={() => setCurrentScreen('ChildPermissions')}
+            onBack={goBack}
+            onLinkSuccess={() => navigateTo('ChildPermissions')}
           />
         );
       case 'ChildPermissions':
         return (
           <ChildPermissionsScreen
-            onBack={() => setCurrentScreen('ChildLink')}
-            onConfirmPermissions={() => setCurrentScreen('ChildMode')}
+            onBack={goBack}
+            onConfirmPermissions={() => {
+              setCurrentScreen('ChildMode');
+              setScreenStack(['ChildMode']);
+            }}
           />
         );
       case 'ChildMode':
         return <ChildModeScreen onUnlink={handleSignOut} />;
       case 'AdminLogs':
-        return <AdminLogsScreen onBack={() => setCurrentScreen('Login')} />;
+        return <AdminLogsScreen onBack={goBack} />;
       default:
         return (
           <DeviceRoleSelectionScreen
-            onSelectParent={() => setCurrentScreen('Login')}
-            onSelectChild={() => setCurrentScreen('ChildLink')}
-            onViewBindingCode={() => setCurrentScreen('TwoStepBinding')}
+            onSelectParent={() => navigateTo('Login')}
+            onSelectChild={() => navigateTo('ChildLink')}
+            onViewBindingCode={() => navigateTo('TwoStepBinding')}
           />
         );
     }

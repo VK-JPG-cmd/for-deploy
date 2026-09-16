@@ -107,6 +107,8 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({
         email: email.trim(),
         user_id: createdId,
       });
+      await Storage.setAssignedRole('PARENT');
+      await Storage.setAuthToken(`auth_sess_${createdId}_${Date.now()}`);
       setSuccessMessage('Account created! Redirecting to Sign In...');
       setTimeout(() => {
         onSignUpSuccess();

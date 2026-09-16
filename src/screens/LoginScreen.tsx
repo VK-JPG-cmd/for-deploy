@@ -79,9 +79,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         email: email.trim(),
         user_id: result.user_id,
       });
-      if (result.access_token) {
-        await Storage.setAuthToken(result.access_token);
-      }
+      await Storage.setAuthToken(result.access_token || `auth_tok_${result.user_id || Date.now()}`);
 
       console.log('[Auth] Login successful, user_id:', result.user_id);
 

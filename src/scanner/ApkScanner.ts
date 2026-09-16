@@ -41,12 +41,11 @@ export const ApkScanner = {
       }
     }
 
-    // 2. Simulated Fallback (for testing / development without real APKs)
+    // 2. If non-Android or parsing failed, return empty permissions rather than mock data
     if (!isNativeSuccess) {
-      const mockData = this.getMockPermissionsForFileName(fileName);
-      permissions = mockData.permissions;
-      packageName = `com.simulated.${fileName.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-      version = '1.0.0-mock';
+      permissions = [];
+      packageName = fileName.replace(/\.[^/.]+$/, '');
+      version = '1.0';
     }
 
     // 3. Analyze permissions and build response

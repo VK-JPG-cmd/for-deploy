@@ -294,6 +294,12 @@ export const Storage = {
     }
   },
 
+  async hasActiveSession(): Promise<boolean> {
+    const token = await getStored('auth_token');
+    const profile = await getStored('user_profile');
+    return !!(token || profile);
+  },
+
   async clear(): Promise<void> {
     await removeStored('auth_token');
     await removeStored('user_profile');

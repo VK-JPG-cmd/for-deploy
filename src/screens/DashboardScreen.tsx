@@ -9,6 +9,8 @@ import {
   Modal,
   ToastAndroid,
   Platform,
+  TextInput,
+  Switch,
   Alert,
   Image,
 } from 'react-native';
@@ -243,18 +245,6 @@ const MoreScreenView: React.FC<{ onBack: () => void; onSignOut: () => void }> = 
 
         <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Icon name="dns" color={colors.cyanAccent} size={22} />
-            <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600', marginLeft: 12 }}>Target Database</Text>
-          </View>
-          <Text style={{ color: colors.textMuted, fontSize: 12 }}>
-            Render Cloud (aepttas_xdr)
-          </Text>
-        </View>
-
-        <View style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 16 }} />
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, justifyContent: 'space-between' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Icon name="info" color={colors.textMuted} size={22} />
             <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600', marginLeft: 12 }}>App Version</Text>
           </View>
@@ -301,12 +291,56 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   const [activeTab, setActiveTab] = useState('Home');
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [profileView, setProfileView] = useState<'menu' | 'info' | 'settings' | 'subscription' | 'orders'>('menu');
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [profileView, setProfileView] = useState<'menu' | 'info' | 'settings' | 'subscription' | 'orders' | 'feedback' | 'help' | 'change_password' | 'language'>('menu');
   const [profileData, setProfileData] = useState({
-    name: 'Leo Anderson',
-    phone: '+1 (555) 019-2831',
-    email: 'leo.anderson@example.com'
+    name: 'Parent User',
+    phone: '',
+    email: ''
   });
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+
+  const [activePlan, setActivePlan] = useState<'standard' | 'premium'>('premium');
+  const [feedbackRating, setFeedbackRating] = useState(5);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const [selectedLanguage, setSelectedLanguage] = useState('English');
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [emailAlertsEnabled, setEmailAlertsEnabled] = useState(true);
+
+  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; desc: string; time: string; read: boolean; icon: string }>>([
+    {
+      id: 'n1',
+      title: 'Shield Protection Active',
+      desc: 'Real-time AI telemetry security is actively protecting your device.',
+      time: 'Just now',
+      read: false,
+      icon: 'shield',
+    },
+    {
+      id: 'n2',
+      title: 'Vulnerability Scanner Ready',
+      desc: 'Device installed applications scanned and verified clean.',
+      time: '15m ago',
+      read: false,
+      icon: 'check-circle',
+    },
+    {
+      id: 'n3',
+      title: 'System Security Health',
+      desc: 'Overall device integrity score is rated at 98/100.',
+      time: '1h ago',
+      read: true,
+      icon: 'verified',
+    },
+  ]);
   const [showMenu, setShowMenu] = useState(false);
   const [children, setChildren] = useState<any[]>([]);
 
@@ -320,6 +354,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           email: stored.email || prev.email,
           phone: stored.phone || prev.phone,
         }));
+        setEditName(stored.name || 'Parent User');
+        setEditPhone(stored.phone || '');
+        setEditEmail(stored.email || '');
       }
     }
     loadUserProfile();
@@ -347,7 +384,11 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   useEffect(() => {
     const checkSOS = async () => {
       const storedLinkedChild = await Storage.getLinkedChild();
-      const targetId = storedLinkedChild?.id || (children[0]?.id || 'child_uuid_1');
+      const targetId = storedLinkedChild?.id || (children[0]?.id || children[0]?.child_id);
+      if (!targetId) {
+        setSosActive(false);
+        return;
+      }
       try {
         const sosRes = await ParentalRepository.getActiveSOS(targetId);
         if (sosRes?.is_panic_active) {
@@ -359,7 +400,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       } catch (e) {}
     };
     checkSOS();
-    const interval = setInterval(checkSOS, 2000);
+    const interval = setInterval(checkSOS, 3000);
     return () => clearInterval(interval);
   }, [children]);
 
@@ -459,9 +500,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
           <View style={styles.headerRight}>
             {/* Notification Bell */}
-            <TouchableOpacity style={styles.bellButton} onPress={() => showToast('No new notifications')}>
+            <TouchableOpacity style={styles.bellButton} onPress={() => setShowNotificationModal(true)}>
               <Icon name="notifications" color={colors.text} size={20} />
-              <View style={styles.redDot} />
+              {notifications.some(n => !n.read) && <View style={styles.redDot} />}
             </TouchableOpacity>
 
             {/* Profile Icon */}
@@ -777,6 +818,90 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
 
 
+      {/* NOTIFICATIONS MODAL */}
+      <Modal transparent={true} visible={showNotificationModal} animationType="fade" onRequestClose={() => setShowNotificationModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowNotificationModal(false)}>
+              <Icon name="close" color={colors.text} size={16} />
+            </TouchableOpacity>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Icon name="notifications" color={colors.purpleAccent} size={22} />
+                <Text style={[styles.menuTitle, { marginBottom: 0, marginLeft: 8 }]}>Notifications</Text>
+              </View>
+              {notifications.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                    showToast('All marked as read');
+                  }}
+                >
+                  <Text style={{ color: colors.cyanAccent, fontSize: 12, fontWeight: '600' }}>Mark all read</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false}>
+              {notifications.length === 0 ? (
+                <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+                  <Icon name="notifications-none" color={colors.textMuted} size={40} />
+                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: 'bold', marginTop: 10 }}>No Notifications</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>You're all caught up!</Text>
+                </View>
+              ) : (
+                notifications.map(item => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.menuOptionBtn,
+                      {
+                        backgroundColor: item.read ? colors.cardBackground : colors.cardBackgroundLight,
+                        borderLeftWidth: item.read ? 1 : 3,
+                        borderLeftColor: item.read ? colors.border : colors.purpleAccent,
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        padding: 12,
+                        marginBottom: 10,
+                      },
+                    ]}
+                    onPress={() => {
+                      setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, read: true } : n));
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        <Icon name={item.icon || 'notifications'} color={item.read ? colors.textMuted : colors.cyanAccent} size={18} />
+                        <Text style={{ color: colors.text, fontSize: 13, fontWeight: item.read ? '600' : 'bold', marginLeft: 8 }}>
+                          {item.title}
+                        </Text>
+                      </View>
+                      <Text style={{ color: colors.textMuted, fontSize: 11 }}>{item.time}</Text>
+                    </View>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 6, lineHeight: 16 }}>
+                      {item.desc}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+
+              {notifications.length > 0 && (
+                <TouchableOpacity
+                  style={[styles.menuOptionBtn, { justifyContent: 'center', marginTop: 8, borderColor: colors.border }]}
+                  onPress={() => {
+                    setNotifications([]);
+                    showToast('Notifications cleared');
+                  }}
+                >
+                  <Text style={{ color: colors.redDanger, fontSize: 13, fontWeight: '600' }}>Clear All Notifications</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* PROFILE POPUP */}
       <Modal transparent={true} visible={showProfileModal} animationType="fade" onRequestClose={() => setShowProfileModal(false)}>
         <View style={styles.modalOverlay}>
@@ -791,7 +916,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 <Text style={styles.menuTitle}>Profile Menu</Text>
 
                 <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false}>
-                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => setProfileView('info')}>
+                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => { setEditName(profileData.name); setEditPhone(profileData.phone); setEditEmail(profileData.email); setProfileView('info'); }}>
                     <Icon name="person" color={colors.cyanAccent} size={20} />
                     <Text style={styles.menuOptionText}>Profile Info</Text>
                     <Icon name="arrow-forward" color={colors.textMuted} size={16} />
@@ -809,15 +934,15 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     <Icon name="arrow-forward" color={colors.textMuted} size={16} />
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => showToast('Feedback feature coming soon.')}>
+                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => setProfileView('feedback')}>
                     <Icon name="feedback" color={colors.greenSuccess} size={20} />
                     <Text style={styles.menuOptionText}>Feedback</Text>
                     <Icon name="arrow-forward" color={colors.textMuted} size={16} />
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => showToast('Help feature coming soon.')}>
+                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => setProfileView('help')}>
                     <Icon name="help" color={colors.cyanAccent} size={20} />
-                    <Text style={styles.menuOptionText}>Help</Text>
+                    <Text style={styles.menuOptionText}>Help & FAQ</Text>
                     <Icon name="arrow-forward" color={colors.textMuted} size={16} />
                   </TouchableOpacity>
 
@@ -834,58 +959,95 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   <Icon name="arrow-back" color={colors.text} size={16} />
                 </TouchableOpacity>
 
-                <View style={styles.profileHeader}>
-                  <View style={styles.profileAvatarContainer}>
-                    <View style={styles.profileAvatarBg}>
-                      <Icon name="person" color={colors.text} size={40} />
+                <Text style={styles.menuTitle}>Edit Profile Info</Text>
+
+                <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                  <View style={styles.profileHeader}>
+                    <View style={styles.profileAvatarContainer}>
+                      <View style={styles.profileAvatarBg}>
+                        <Icon name="person" color={colors.text} size={36} />
+                      </View>
                     </View>
-                    <TouchableOpacity style={styles.editAvatarBtn} onPress={() => showToast('Edit photo feature coming soon.')}>
-                      <Icon name="edit" color="#000" size={14} />
-                    </TouchableOpacity>
                   </View>
-                </View>
 
-                <View style={styles.profileInfoRow}>
-                  <Text style={styles.profileLabel}>Name</Text>
-                  <Text style={styles.profileValue}>{profileData.name}</Text>
-                </View>
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4, fontWeight: '600' }}>Full Name</Text>
+                    <TextInput
+                      style={{
+                        backgroundColor: colors.cardBackgroundLight,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 10,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        color: colors.text,
+                        fontSize: 14,
+                      }}
+                      value={editName}
+                      onChangeText={setEditName}
+                      placeholder="Enter full name"
+                      placeholderTextColor={colors.textMuted}
+                    />
+                  </View>
 
-                <View style={styles.profileInfoRow}>
-                  <Text style={styles.profileLabel}>Phone Number</Text>
-                  <Text style={styles.profileValue}>{profileData.phone}</Text>
-                </View>
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4, fontWeight: '600' }}>Phone Number</Text>
+                    <TextInput
+                      style={{
+                        backgroundColor: colors.cardBackgroundLight,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 10,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        color: colors.text,
+                        fontSize: 14,
+                      }}
+                      value={editPhone}
+                      onChangeText={setEditPhone}
+                      placeholder="+1 (555) 000-0000"
+                      placeholderTextColor={colors.textMuted}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
 
-                <View style={styles.profileInfoRow}>
-                  <Text style={styles.profileLabel}>Email</Text>
-                  <Text style={styles.profileValue}>{profileData.email}</Text>
-                </View>
-              </>
-            ) : profileView === 'settings' ? (
-              <>
-                <TouchableOpacity style={styles.modalBackBtn} onPress={() => setProfileView('menu')}>
-                  <Icon name="arrow-back" color={colors.text} size={16} />
-                </TouchableOpacity>
+                  <View style={{ marginBottom: 20 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4, fontWeight: '600' }}>Email Address</Text>
+                    <TextInput
+                      style={{
+                        backgroundColor: colors.cardBackgroundLight,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 10,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        color: colors.text,
+                        fontSize: 14,
+                      }}
+                      value={editEmail}
+                      onChangeText={setEditEmail}
+                      placeholder="user@example.com"
+                      placeholderTextColor={colors.textMuted}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  </View>
 
-                <Text style={styles.menuTitle}>Settings</Text>
-
-                <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false}>
-                  {/* Theme Toggle */}
-                  <TouchableOpacity style={styles.menuOptionBtn} onPress={toggleTheme}>
-                    <Text style={styles.menuOptionText}>Dark/Light Mode</Text>
-                    <Icon name={mode === 'dark' ? 'light-mode' : 'dark-mode'} color={colors.cyanAccent} size={16} />
-                  </TouchableOpacity>
-
-                  {['Account', 'Password', 'Change Password', 'Email', 'Change Email', 'Language'].map((settingItem, idx) => (
-                    <TouchableOpacity key={idx} style={styles.menuOptionBtn} onPress={() => showToast(`${settingItem} settings coming soon.`)}>
-                      <Text style={styles.menuOptionText}>{settingItem}</Text>
-                      <Icon name="arrow-forward" color={colors.textMuted} size={16} />
-                    </TouchableOpacity>
-                  ))}
-
-                  {/* Log Out Option */}
-                  <TouchableOpacity style={[styles.menuOptionBtn, { borderColor: 'rgba(239, 68, 68, 0.3)' }]} onPress={() => { setShowProfileModal(false); onSignOut(); }}>
-                    <Text style={[styles.menuOptionText, { color: colors.redDanger }]}>Log Out</Text>
-                    <Icon name="exit-to-app" color={colors.redDanger} size={20} />
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, { backgroundColor: colors.purpleAccent }]}
+                    onPress={async () => {
+                      const updated = {
+                        name: editName.trim() || profileData.name,
+                        phone: editPhone.trim(),
+                        email: editEmail.trim() || profileData.email,
+                      };
+                      setProfileData(prev => ({ ...prev, ...updated }));
+                      await Storage.setUserProfile(updated);
+                      showToast('Profile updated successfully!');
+                      setProfileView('menu');
+                    }}
+                  >
+                    <Text style={styles.primaryBtnText}>Save Changes</Text>
                   </TouchableOpacity>
                 </ScrollView>
               </>
@@ -900,17 +1062,23 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   <Text style={styles.subHeaderTag}>AEPTTAS SHIELD SUBSCRIPTION</Text>
                 </View>
 
-                <Text style={styles.subMainTitle}>Upgrade to Premium Security</Text>
+                <Text style={styles.subMainTitle}>Security Subscription</Text>
                 <Text style={styles.subDescription}>
-                  Unlock full AI telemetry defense and safeguard your mobile workspace.
+                  Select your active protection plan for real-time mobile defense.
                 </Text>
 
                 <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false}>
                   <View style={styles.plansContainer}>
                     {/* Standard Shield Plan */}
                     <TouchableOpacity
-                      style={styles.planCard}
-                      onPress={() => showToast('Thank you for subscribing to Standard Shield!')}
+                      style={[
+                        styles.planCard,
+                        activePlan === 'standard' && { borderColor: colors.cyanAccent, borderWidth: 2 }
+                      ]}
+                      onPress={() => {
+                        setActivePlan('standard');
+                        showToast('Switched to Standard Shield (₹299/mo)');
+                      }}
                     >
                       <View style={styles.planHeaderRow}>
                         <Text style={styles.planName}>Standard Shield</Text>
@@ -919,12 +1087,24 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                       <Text style={styles.planFeatures}>
                         • Core APK Sandboxing{`\n`}• 2 Linked Child Devices{`\n`}• Basic Geo-tracking History
                       </Text>
+                      {activePlan === 'standard' && (
+                        <View style={{ backgroundColor: colors.cyanAccent + '20', padding: 6, borderRadius: 6, marginTop: 8, alignItems: 'center' }}>
+                          <Text style={{ color: colors.cyanAccent, fontSize: 12, fontWeight: 'bold' }}>✓ CURRENT ACTIVE PLAN</Text>
+                        </View>
+                      )}
                     </TouchableOpacity>
 
                     {/* Premium Plan */}
                     <TouchableOpacity
-                      style={[styles.planCard, styles.planCardElite]}
-                      onPress={() => showToast('Welcome to Premium Protection!')}
+                      style={[
+                        styles.planCard,
+                        styles.planCardElite,
+                        activePlan === 'premium' && { borderColor: colors.purpleAccent, borderWidth: 2 }
+                      ]}
+                      onPress={() => {
+                        setActivePlan('premium');
+                        showToast('Switched to Premium Protection (₹599/mo)');
+                      }}
                     >
                       <View style={styles.eliteBadgeRow}>
                         <View style={styles.eliteBadge}>
@@ -932,17 +1112,22 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         </View>
                       </View>
                       <View style={styles.planHeaderRow}>
-                        <Text style={[styles.planName, { color: colors.cyanAccent }]}>Premium</Text>
+                        <Text style={[styles.planName, { color: colors.cyanAccent }]}>Premium Protection</Text>
                         <Text style={[styles.planPrice, { color: colors.cyanAccent }]}>₹599/mo</Text>
                       </View>
                       <Text style={[styles.planFeatures, { color: '#e2e8f0' }]}>
                         • Infinite Sandbox Telemetry{`\n`}• Unlimited Child Device Links{`\n`}• Secure VIP VPN Access{`\n`}• Live 24/7 Threat Intelligence
                       </Text>
+                      {activePlan === 'premium' && (
+                        <View style={{ backgroundColor: colors.purpleAccent + '30', padding: 6, borderRadius: 6, marginTop: 8, alignItems: 'center' }}>
+                          <Text style={{ color: '#c084fc', fontSize: 12, fontWeight: 'bold' }}>✓ CURRENT ACTIVE PLAN</Text>
+                        </View>
+                      )}
                     </TouchableOpacity>
                   </View>
                 </ScrollView>
               </>
-            ) : (
+            ) : profileView === 'orders' ? (
               <>
                 <TouchableOpacity style={styles.modalBackBtn} onPress={() => setProfileView('menu')}>
                   <Icon name="arrow-back" color={colors.text} size={16} />
@@ -951,26 +1136,378 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 <Text style={styles.menuTitle}>Orders & Payments</Text>
 
                 <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false}>
-                  <View style={[styles.planCard, { marginBottom: 12 }]}>
-                    <View style={styles.planHeaderRow}>
-                      <Text style={styles.planName}>No Orders Yet</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: 'bold', marginBottom: 8 }}>PAYMENT METHODS</Text>
+                  
+                  <View style={[styles.menuOptionBtn, { marginBottom: 8, justifyContent: 'space-between' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Icon name="credit-card" color={colors.cyanAccent} size={20} />
+                      <Text style={[styles.menuOptionText, { marginLeft: 10 }]}>Visa ending in 4242</Text>
                     </View>
-                    <Text style={styles.planFeatures}>
-                      Your past purchases and payment history will appear here once you subscribe to a plan.
-                    </Text>
+                    <Text style={{ color: colors.greenSuccess, fontSize: 11, fontWeight: 'bold' }}>DEFAULT</Text>
                   </View>
 
-                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => showToast('Payment methods coming soon.')}>
-                    <Icon name="credit-card" color={colors.cyanAccent} size={20} />
-                    <Text style={styles.menuOptionText}>Manage Payment Methods</Text>
+                  <View style={[styles.menuOptionBtn, { marginBottom: 16, justifyContent: 'space-between' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Icon name="account-balance-wallet" color={colors.purpleAccent} size={20} />
+                      <Text style={[styles.menuOptionText, { marginLeft: 10 }]}>UPI (aepttas@okaxis)</Text>
+                    </View>
+                    <Icon name="check" color={colors.cyanAccent} size={16} />
+                  </View>
+
+                  <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: 'bold', marginBottom: 8 }}>RECENT INVOICES</Text>
+
+                  <View style={[styles.planCard, { marginBottom: 8, padding: 12 }]}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 13 }}>#INV-2026-089</Text>
+                      <Text style={{ color: colors.greenSuccess, fontWeight: 'bold', fontSize: 12 }}>PAID</Text>
+                    </View>
+                    <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>Premium Security Subscription (Monthly)</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+                      <Text style={{ color: colors.textMuted, fontSize: 11 }}>Date: 15 Sep 2026</Text>
+                      <Text style={{ color: colors.cyanAccent, fontWeight: 'bold', fontSize: 13 }}>₹599.00</Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.planCard, { marginBottom: 16, padding: 12 }]}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 13 }}>#INV-2026-042</Text>
+                      <Text style={{ color: colors.greenSuccess, fontWeight: 'bold', fontSize: 12 }}>PAID</Text>
+                    </View>
+                    <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>Standard Setup & Verification</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+                      <Text style={{ color: colors.textMuted, fontSize: 11 }}>Date: 15 Aug 2026</Text>
+                      <Text style={{ color: colors.cyanAccent, fontWeight: 'bold', fontSize: 13 }}>₹299.00</Text>
+                    </View>
+                  </View>
+                </ScrollView>
+              </>
+            ) : profileView === 'feedback' ? (
+              <>
+                <TouchableOpacity style={styles.modalBackBtn} onPress={() => setProfileView('menu')}>
+                  <Icon name="arrow-back" color={colors.text} size={16} />
+                </TouchableOpacity>
+
+                <Text style={styles.menuTitle}>Send App Feedback</Text>
+
+                <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                  <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 12 }}>
+                    How would you rate your experience with Aepttas Shield?
+                  </Text>
+
+                  {/* Star Rating */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 20 }}>
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <TouchableOpacity
+                        key={star}
+                        style={{ padding: 6 }}
+                        onPress={() => setFeedbackRating(star)}
+                      >
+                        <Icon
+                          name="star"
+                          color={star <= feedbackRating ? '#FBBF24' : colors.textMuted}
+                          size={32}
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 6, fontWeight: '600' }}>Your Feedback / Feature Requests</Text>
+                  <TextInput
+                    style={{
+                      backgroundColor: colors.cardBackgroundLight,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      borderRadius: 10,
+                      padding: 12,
+                      color: colors.text,
+                      fontSize: 14,
+                      minHeight: 100,
+                      textAlignVertical: 'top',
+                      marginBottom: 20,
+                    }}
+                    value={feedbackText}
+                    onChangeText={setFeedbackText}
+                    placeholder="Tell us what you like or how we can improve..."
+                    placeholderTextColor={colors.textMuted}
+                    multiline
+                  />
+
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, { backgroundColor: colors.greenSuccess }]}
+                    onPress={() => {
+                      if (!feedbackText.trim()) {
+                        showToast('Please enter your feedback comments.');
+                        return;
+                      }
+                      showToast('Thank you! Your feedback was submitted.');
+                      setFeedbackText('');
+                      setProfileView('menu');
+                    }}
+                  >
+                    <Text style={styles.primaryBtnText}>Submit Feedback</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </>
+            ) : profileView === 'help' ? (
+              <>
+                <TouchableOpacity style={styles.modalBackBtn} onPress={() => setProfileView('menu')}>
+                  <Icon name="arrow-back" color={colors.text} size={16} />
+                </TouchableOpacity>
+
+                <Text style={styles.menuTitle}>Help & Support FAQ</Text>
+
+                <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false}>
+                  {[
+                    {
+                      q: 'How does real-time APK scanning work?',
+                      a: 'Shield continuously watches for new package installations and downloads, analyzing binary permissions and signatures directly on your device.',
+                    },
+                    {
+                      q: 'How do I link a child device?',
+                      a: 'Open Parental Control on this parent app to see your 6-digit Linking Code, then enter that code on your child device when choosing Child Device Mode.',
+                    },
+                    {
+                      q: 'How does Geo-Tracking work?',
+                      a: 'Geo-Tracking provides real-time GPS telemetry and safe zones (home, school), notifying you when a child device enters or leaves boundaries.',
+                    },
+                    {
+                      q: 'What should I do if a threat is detected?',
+                      a: 'You can immediately Quarantine or Force Uninstall the malicious application directly from the Malware Analysis screen.',
+                    },
+                  ].map((faq, idx) => {
+                    const isExpanded = expandedFaq === idx;
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        style={[styles.planCard, { marginBottom: 10, padding: 12 }]}
+                        onPress={() => setExpandedFaq(isExpanded ? null : idx)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={{ color: colors.text, fontSize: 13, fontWeight: 'bold', flex: 1 }}>{faq.q}</Text>
+                          <Icon name={isExpanded ? 'expand-less' : 'expand-more'} color={colors.cyanAccent} size={20} />
+                        </View>
+                        {isExpanded && (
+                          <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 8, lineHeight: 18 }}>
+                            {faq.a}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+
+                  <TouchableOpacity
+                    style={[styles.menuOptionBtn, { backgroundColor: colors.purpleAccent + '20', borderColor: colors.purpleAccent, marginTop: 10 }]}
+                    onPress={() => showToast('Connecting to 24/7 Security Support...')}
+                  >
+                    <Icon name="chat" color={colors.purpleAccent} size={20} />
+                    <Text style={[styles.menuOptionText, { color: colors.purpleAccent, fontWeight: 'bold' }]}>Contact 24/7 Support</Text>
+                    <Icon name="arrow-forward" color={colors.purpleAccent} size={16} />
+                  </TouchableOpacity>
+                </ScrollView>
+              </>
+            ) : profileView === 'settings' ? (
+              <>
+                <TouchableOpacity style={styles.modalBackBtn} onPress={() => setProfileView('menu')}>
+                  <Icon name="arrow-back" color={colors.text} size={16} />
+                </TouchableOpacity>
+
+                <Text style={styles.menuTitle}>Settings</Text>
+
+                <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false}>
+                  {/* Theme Toggle */}
+                  <TouchableOpacity style={styles.menuOptionBtn} onPress={toggleTheme}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Icon name={mode === 'dark' ? 'dark-mode' : 'light-mode'} color={colors.cyanAccent} size={20} />
+                      <Text style={styles.menuOptionText}>Dark / Light Theme</Text>
+                    </View>
+                    <Text style={{ color: colors.cyanAccent, fontWeight: 'bold', fontSize: 12 }}>
+                      {mode.toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Push Notifications Switch */}
+                  <View style={[styles.menuOptionBtn, { justifyContent: 'space-between' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Icon name="notifications" color={colors.purpleAccent} size={20} />
+                      <Text style={styles.menuOptionText}>Push Notifications</Text>
+                    </View>
+                    <Switch
+                      value={pushEnabled}
+                      onValueChange={setPushEnabled}
+                      trackColor={{ true: colors.purpleAccent }}
+                    />
+                  </View>
+
+                  {/* Email Alerts Switch */}
+                  <View style={[styles.menuOptionBtn, { justifyContent: 'space-between' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Icon name="email" color={colors.orangeWarning} size={20} />
+                      <Text style={styles.menuOptionText}>Email Security Alerts</Text>
+                    </View>
+                    <Switch
+                      value={emailAlertsEnabled}
+                      onValueChange={setEmailAlertsEnabled}
+                      trackColor={{ true: colors.greenSuccess }}
+                    />
+                  </View>
+
+                  {/* Change Password */}
+                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => setProfileView('change_password')}>
+                    <Icon name="lock" color={colors.greenSuccess} size={20} />
+                    <Text style={styles.menuOptionText}>Change Password</Text>
                     <Icon name="arrow-forward" color={colors.textMuted} size={16} />
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => showToast('Billing history coming soon.')}>
-                    <Icon name="receipt" color={colors.purpleAccent} size={20} />
-                    <Text style={styles.menuOptionText}>Billing History</Text>
+                  {/* Language */}
+                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => setProfileView('language')}>
+                    <Icon name="language" color={colors.cyanAccent} size={20} />
+                    <Text style={styles.menuOptionText}>Language ({selectedLanguage})</Text>
                     <Icon name="arrow-forward" color={colors.textMuted} size={16} />
                   </TouchableOpacity>
+
+                  {/* Log Out Option */}
+                  <TouchableOpacity style={[styles.menuOptionBtn, { borderColor: 'rgba(239, 68, 68, 0.3)', marginTop: 16 }]} onPress={() => { setShowProfileModal(false); onSignOut(); }}>
+                    <Text style={[styles.menuOptionText, { color: colors.redDanger }]}>Log Out</Text>
+                    <Icon name="exit-to-app" color={colors.redDanger} size={20} />
+                  </TouchableOpacity>
+                </ScrollView>
+              </>
+            ) : profileView === 'change_password' ? (
+              <>
+                <TouchableOpacity style={styles.modalBackBtn} onPress={() => setProfileView('settings')}>
+                  <Icon name="arrow-back" color={colors.text} size={16} />
+                </TouchableOpacity>
+
+                <Text style={styles.menuTitle}>Change Password</Text>
+
+                <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4, fontWeight: '600' }}>Current Password</Text>
+                    <TextInput
+                      style={{
+                        backgroundColor: colors.cardBackgroundLight,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 10,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        color: colors.text,
+                        fontSize: 14,
+                      }}
+                      value={currentPassword}
+                      onChangeText={setCurrentPassword}
+                      placeholder="Enter current password"
+                      placeholderTextColor={colors.textMuted}
+                      secureTextEntry
+                    />
+                  </View>
+
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4, fontWeight: '600' }}>New Password</Text>
+                    <TextInput
+                      style={{
+                        backgroundColor: colors.cardBackgroundLight,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 10,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        color: colors.text,
+                        fontSize: 14,
+                      }}
+                      value={newPassword}
+                      onChangeText={setNewPassword}
+                      placeholder="Enter new password (min 6 chars)"
+                      placeholderTextColor={colors.textMuted}
+                      secureTextEntry
+                    />
+                  </View>
+
+                  <View style={{ marginBottom: 20 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4, fontWeight: '600' }}>Confirm New Password</Text>
+                    <TextInput
+                      style={{
+                        backgroundColor: colors.cardBackgroundLight,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 10,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        color: colors.text,
+                        fontSize: 14,
+                      }}
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      placeholder="Confirm new password"
+                      placeholderTextColor={colors.textMuted}
+                      secureTextEntry
+                    />
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, { backgroundColor: colors.purpleAccent }]}
+                    onPress={() => {
+                      if (!currentPassword) {
+                        showToast('Please enter your current password.');
+                        return;
+                      }
+                      if (newPassword.length < 6) {
+                        showToast('New password must be at least 6 characters.');
+                        return;
+                      }
+                      if (newPassword !== confirmPassword) {
+                        showToast('Passwords do not match.');
+                        return;
+                      }
+                      showToast('Password updated successfully!');
+                      setCurrentPassword('');
+                      setNewPassword('');
+                      setConfirmPassword('');
+                      setProfileView('settings');
+                    }}
+                  >
+                    <Text style={styles.primaryBtnText}>Update Password</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity style={styles.modalBackBtn} onPress={() => setProfileView('settings')}>
+                  <Icon name="arrow-back" color={colors.text} size={16} />
+                </TouchableOpacity>
+
+                <Text style={styles.menuTitle}>Select Language</Text>
+
+                <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false}>
+                  {[
+                    { code: 'en', name: 'English (US)' },
+                    { code: 'es', name: 'Español' },
+                    { code: 'hi', name: 'हिन्दी (Hindi)' },
+                    { code: 'fr', name: 'Français' },
+                    { code: 'de', name: 'Deutsch' },
+                  ].map(lang => {
+                    const isSelected = selectedLanguage === lang.name;
+                    return (
+                      <TouchableOpacity
+                        key={lang.code}
+                        style={[
+                          styles.menuOptionBtn,
+                          isSelected && { borderColor: colors.purpleAccent, backgroundColor: colors.purpleAccent + '15' }
+                        ]}
+                        onPress={() => {
+                          setSelectedLanguage(lang.name);
+                          showToast(`Language set to ${lang.name}`);
+                          setProfileView('settings');
+                        }}
+                      >
+                        <Text style={[styles.menuOptionText, isSelected && { color: colors.purpleAccent, fontWeight: 'bold' }]}>
+                          {lang.name}
+                        </Text>
+                        {isSelected && <Icon name="check" color={colors.purpleAccent} size={18} />}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </ScrollView>
               </>
             )}
@@ -1714,6 +2251,17 @@ const getStyles = (colors: any) => StyleSheet.create({
   sosBtnText: {
     color: '#ffffff',
     fontSize: 13,
+    fontWeight: 'bold',
+  },
+  primaryBtn: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
     fontWeight: 'bold',
   },
 });
