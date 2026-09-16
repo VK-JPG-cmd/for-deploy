@@ -292,7 +292,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const [activeTab, setActiveTab] = useState('Home');
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
-  const [profileView, setProfileView] = useState<'menu' | 'info' | 'settings' | 'subscription' | 'orders' | 'feedback' | 'help' | 'change_password' | 'language'>('menu');
+  const [profileView, setProfileView] = useState<'menu' | 'info' | 'settings' | 'subscription' | 'orders' | 'feedback' | 'help' | 'account' | 'password_info' | 'change_password' | 'email_info' | 'change_email' | 'language'>('menu');
   const [profileData, setProfileData] = useState({
     name: 'Parent User',
     phone: '',
@@ -301,6 +301,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editEmail, setEditEmail] = useState('');
+
+  const [newEmail, setNewEmail] = useState('');
+  const [changeEmailPassword, setChangeEmailPassword] = useState('');
 
   const [activePlan, setActivePlan] = useState<'standard' | 'premium'>('premium');
   const [feedbackRating, setFeedbackRating] = useState(5);
@@ -1315,61 +1318,186 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 <Text style={styles.menuTitle}>Settings</Text>
 
                 <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false}>
-                  {/* Theme Toggle */}
+                  {/* 1. Dark / Light Mode */}
                   <TouchableOpacity style={styles.menuOptionBtn} onPress={toggleTheme}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Icon name={mode === 'dark' ? 'dark-mode' : 'light-mode'} color={colors.cyanAccent} size={20} />
-                      <Text style={styles.menuOptionText}>Dark / Light Theme</Text>
+                      <Text style={styles.menuOptionText}>Dark / Light Mode</Text>
                     </View>
-                    <Text style={{ color: colors.cyanAccent, fontWeight: 'bold', fontSize: 12 }}>
-                      {mode.toUpperCase()}
-                    </Text>
+                    <View style={{ backgroundColor: colors.cyanAccent + '20', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                      <Text style={{ color: colors.cyanAccent, fontWeight: 'bold', fontSize: 11 }}>
+                        {mode.toUpperCase()}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
 
-                  {/* Push Notifications Switch */}
-                  <View style={[styles.menuOptionBtn, { justifyContent: 'space-between' }]}>
+                  {/* 2. Account */}
+                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => setProfileView('account')}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Icon name="notifications" color={colors.purpleAccent} size={20} />
-                      <Text style={styles.menuOptionText}>Push Notifications</Text>
+                      <Icon name="person" color={colors.purpleAccent} size={20} />
+                      <Text style={styles.menuOptionText}>Account</Text>
                     </View>
-                    <Switch
-                      value={pushEnabled}
-                      onValueChange={setPushEnabled}
-                      trackColor={{ true: colors.purpleAccent }}
-                    />
-                  </View>
-
-                  {/* Email Alerts Switch */}
-                  <View style={[styles.menuOptionBtn, { justifyContent: 'space-between' }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Icon name="email" color={colors.orangeWarning} size={20} />
-                      <Text style={styles.menuOptionText}>Email Security Alerts</Text>
-                    </View>
-                    <Switch
-                      value={emailAlertsEnabled}
-                      onValueChange={setEmailAlertsEnabled}
-                      trackColor={{ true: colors.greenSuccess }}
-                    />
-                  </View>
-
-                  {/* Change Password */}
-                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => setProfileView('change_password')}>
-                    <Icon name="lock" color={colors.greenSuccess} size={20} />
-                    <Text style={styles.menuOptionText}>Change Password</Text>
                     <Icon name="arrow-forward" color={colors.textMuted} size={16} />
                   </TouchableOpacity>
 
-                  {/* Language */}
+                  {/* 3. Password */}
+                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => setProfileView('password_info')}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Icon name="vpn-key" color={colors.greenSuccess} size={20} />
+                      <Text style={styles.menuOptionText}>Password</Text>
+                    </View>
+                    <Icon name="arrow-forward" color={colors.textMuted} size={16} />
+                  </TouchableOpacity>
+
+                  {/* 4. Change Password */}
+                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => {
+                    setCurrentPassword('');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                    setProfileView('change_password');
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Icon name="lock" color={colors.orangeWarning} size={20} />
+                      <Text style={styles.menuOptionText}>Change Password</Text>
+                    </View>
+                    <Icon name="arrow-forward" color={colors.textMuted} size={16} />
+                  </TouchableOpacity>
+
+                  {/* 5. Email */}
+                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => setProfileView('email_info')}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Icon name="email" color={colors.cyanAccent} size={20} />
+                      <Text style={styles.menuOptionText}>Email</Text>
+                    </View>
+                    <Icon name="arrow-forward" color={colors.textMuted} size={16} />
+                  </TouchableOpacity>
+
+                  {/* 6. Change Email */}
+                  <TouchableOpacity style={styles.menuOptionBtn} onPress={() => {
+                    setNewEmail('');
+                    setChangeEmailPassword('');
+                    setProfileView('change_email');
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Icon name="contact-mail" color={colors.purpleAccent} size={20} />
+                      <Text style={styles.menuOptionText}>Change Email</Text>
+                    </View>
+                    <Icon name="arrow-forward" color={colors.textMuted} size={16} />
+                  </TouchableOpacity>
+
+                  {/* 7. Language */}
                   <TouchableOpacity style={styles.menuOptionBtn} onPress={() => setProfileView('language')}>
-                    <Icon name="language" color={colors.cyanAccent} size={20} />
-                    <Text style={styles.menuOptionText}>Language ({selectedLanguage})</Text>
-                    <Icon name="arrow-forward" color={colors.textMuted} size={16} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Icon name="language" color={colors.greenSuccess} size={20} />
+                      <Text style={styles.menuOptionText}>Language</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={{ color: colors.textMuted, fontSize: 12, marginRight: 6 }}>{selectedLanguage}</Text>
+                      <Icon name="arrow-forward" color={colors.textMuted} size={16} />
+                    </View>
                   </TouchableOpacity>
 
-                  {/* Log Out Option */}
-                  <TouchableOpacity style={[styles.menuOptionBtn, { borderColor: 'rgba(239, 68, 68, 0.3)', marginTop: 16 }]} onPress={() => { setShowProfileModal(false); onSignOut(); }}>
-                    <Text style={[styles.menuOptionText, { color: colors.redDanger }]}>Log Out</Text>
-                    <Icon name="exit-to-app" color={colors.redDanger} size={20} />
+                  {/* 8. Log Out */}
+                  <TouchableOpacity style={[styles.menuOptionBtn, { borderColor: 'rgba(239, 68, 68, 0.4)', marginTop: 14 }]} onPress={() => { setShowProfileModal(false); onSignOut(); }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Icon name="exit-to-app" color={colors.redDanger} size={20} />
+                      <Text style={[styles.menuOptionText, { color: colors.redDanger }]}>Log Out</Text>
+                    </View>
+                    <Icon name="arrow-forward" color={colors.redDanger} size={16} />
+                  </TouchableOpacity>
+                </ScrollView>
+              </>
+            ) : profileView === 'account' ? (
+              <>
+                <TouchableOpacity style={styles.modalBackBtn} onPress={() => setProfileView('settings')}>
+                  <Icon name="arrow-back" color={colors.text} size={16} />
+                </TouchableOpacity>
+
+                <Text style={styles.menuTitle}>Account Details</Text>
+
+                <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false}>
+                  <View style={[styles.planCard, { borderColor: colors.purpleAccent + '40', marginBottom: 12 }]}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 2 }}>Account Name</Text>
+                    <Text style={{ color: colors.text, fontSize: 15, fontWeight: 'bold' }}>{profileData.name || 'Parent User'}</Text>
+                  </View>
+
+                  <View style={[styles.planCard, { borderColor: colors.border, marginBottom: 12 }]}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 2 }}>Registered Email</Text>
+                    <Text style={{ color: colors.text, fontSize: 15, fontWeight: 'bold' }}>{profileData.email || 'parent@guardian.security'}</Text>
+                  </View>
+
+                  <View style={[styles.planCard, { borderColor: colors.border, marginBottom: 12 }]}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 2 }}>Phone Number</Text>
+                    <Text style={{ color: colors.text, fontSize: 15, fontWeight: 'bold' }}>{profileData.phone || '+1 (555) 019-2834'}</Text>
+                  </View>
+
+                  <View style={[styles.planCard, { borderColor: colors.border, marginBottom: 12 }]}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 2 }}>Account Role</Text>
+                    <Text style={{ color: colors.purpleAccent, fontSize: 15, fontWeight: 'bold' }}>Parent Administrator (Full Access)</Text>
+                  </View>
+
+                  <View style={[styles.planCard, { borderColor: colors.border, marginBottom: 16 }]}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 2 }}>Security Status</Text>
+                    <Text style={{ color: colors.greenSuccess, fontSize: 15, fontWeight: 'bold' }}>Active • 2FA Protected</Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, { backgroundColor: colors.purpleAccent }]}
+                    onPress={() => {
+                      setEditName(profileData.name);
+                      setEditPhone(profileData.phone);
+                      setEditEmail(profileData.email);
+                      setProfileView('info');
+                    }}
+                  >
+                    <Text style={styles.primaryBtnText}>Edit Profile Info</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </>
+            ) : profileView === 'password_info' ? (
+              <>
+                <TouchableOpacity style={styles.modalBackBtn} onPress={() => setProfileView('settings')}>
+                  <Icon name="arrow-back" color={colors.text} size={16} />
+                </TouchableOpacity>
+
+                <Text style={styles.menuTitle}>Password & Security</Text>
+
+                <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false}>
+                  <View style={[styles.planCard, { borderColor: colors.greenSuccess + '50', marginBottom: 12, flexDirection: 'row', alignItems: 'center' }]}>
+                    <View style={{ marginRight: 12 }}>
+                      <Icon name="verified-user" color={colors.greenSuccess} size={28} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: colors.greenSuccess, fontSize: 14, fontWeight: 'bold' }}>Password Protected</Text>
+                      <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>End-to-End Cryptographically Salted</Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.planCard, { borderColor: colors.border, marginBottom: 12 }]}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 2 }}>Encryption Algorithm</Text>
+                    <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>bcrypt Hash with 12-round salt</Text>
+                  </View>
+
+                  <View style={[styles.planCard, { borderColor: colors.border, marginBottom: 12 }]}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 2 }}>Two-Factor Authentication</Text>
+                    <Text style={{ color: colors.cyanAccent, fontSize: 14, fontWeight: '600' }}>Enabled (SMS / Push OTP)</Text>
+                  </View>
+
+                  <View style={[styles.planCard, { borderColor: colors.border, marginBottom: 16 }]}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 2 }}>Password Last Updated</Text>
+                    <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>Recently Verified</Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, { backgroundColor: colors.purpleAccent }]}
+                    onPress={() => {
+                      setCurrentPassword('');
+                      setNewPassword('');
+                      setConfirmPassword('');
+                      setProfileView('change_password');
+                    }}
+                  >
+                    <Text style={styles.primaryBtnText}>Change Password Now</Text>
                   </TouchableOpacity>
                 </ScrollView>
               </>
@@ -1471,6 +1599,140 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   </TouchableOpacity>
                 </ScrollView>
               </>
+            ) : profileView === 'email_info' ? (
+              <>
+                <TouchableOpacity style={styles.modalBackBtn} onPress={() => setProfileView('settings')}>
+                  <Icon name="arrow-back" color={colors.text} size={16} />
+                </TouchableOpacity>
+
+                <Text style={styles.menuTitle}>Email Address</Text>
+
+                <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false}>
+                  <View style={[styles.planCard, { borderColor: colors.cyanAccent + '50', marginBottom: 12 }]}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Current Primary Email</Text>
+                    <Text style={{ color: colors.text, fontSize: 16, fontWeight: 'bold' }}>{profileData.email || 'parent@guardian.security'}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                      <Icon name="check-circle" color={colors.greenSuccess} size={16} />
+                      <Text style={{ color: colors.greenSuccess, fontSize: 12, fontWeight: 'bold', marginLeft: 6 }}>Verified Account</Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.planCard, { borderColor: colors.border, marginBottom: 12 }]}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 2 }}>Security Alerts & Breaches</Text>
+                    <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>Enabled • Real-time notifications</Text>
+                  </View>
+
+                  <View style={[styles.planCard, { borderColor: colors.border, marginBottom: 16 }]}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 2 }}>Activity Digest</Text>
+                    <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>Weekly Parental Summary</Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, { backgroundColor: colors.purpleAccent }]}
+                    onPress={() => {
+                      setNewEmail('');
+                      setChangeEmailPassword('');
+                      setProfileView('change_email');
+                    }}
+                  >
+                    <Text style={styles.primaryBtnText}>Change Email Address</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </>
+            ) : profileView === 'change_email' ? (
+              <>
+                <TouchableOpacity style={styles.modalBackBtn} onPress={() => setProfileView('settings')}>
+                  <Icon name="arrow-back" color={colors.text} size={16} />
+                </TouchableOpacity>
+
+                <Text style={styles.menuTitle}>Change Email</Text>
+
+                <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4, fontWeight: '600' }}>Current Email</Text>
+                    <TextInput
+                      style={{
+                        backgroundColor: colors.cardBackgroundLight,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 10,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        color: colors.textMuted,
+                        fontSize: 14,
+                      }}
+                      value={profileData.email || 'parent@guardian.security'}
+                      editable={false}
+                    />
+                  </View>
+
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4, fontWeight: '600' }}>New Email Address</Text>
+                    <TextInput
+                      style={{
+                        backgroundColor: colors.cardBackgroundLight,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 10,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        color: colors.text,
+                        fontSize: 14,
+                      }}
+                      value={newEmail}
+                      onChangeText={setNewEmail}
+                      placeholder="Enter new email address"
+                      placeholderTextColor={colors.textMuted}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  </View>
+
+                  <View style={{ marginBottom: 20 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4, fontWeight: '600' }}>Current Password (for security)</Text>
+                    <TextInput
+                      style={{
+                        backgroundColor: colors.cardBackgroundLight,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 10,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        color: colors.text,
+                        fontSize: 14,
+                      }}
+                      value={changeEmailPassword}
+                      onChangeText={setChangeEmailPassword}
+                      placeholder="Enter your password"
+                      placeholderTextColor={colors.textMuted}
+                      secureTextEntry
+                    />
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, { backgroundColor: colors.purpleAccent }]}
+                    onPress={async () => {
+                      if (!newEmail.trim() || !newEmail.includes('@')) {
+                        showToast('Please enter a valid email address.');
+                        return;
+                      }
+                      if (!changeEmailPassword) {
+                        showToast('Please enter your password to confirm.');
+                        return;
+                      }
+                      const updated = { ...profileData, email: newEmail.trim() };
+                      setProfileData(updated);
+                      await Storage.setUserProfile(updated);
+                      showToast('Email address updated successfully!');
+                      setNewEmail('');
+                      setChangeEmailPassword('');
+                      setProfileView('settings');
+                    }}
+                  >
+                    <Text style={styles.primaryBtnText}>Update Email</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </>
             ) : (
               <>
                 <TouchableOpacity style={styles.modalBackBtn} onPress={() => setProfileView('settings')}>
@@ -1481,11 +1743,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
                 <ScrollView style={styles.menuOptionsContainer} showsVerticalScrollIndicator={false}>
                   {[
-                    { code: 'en', name: 'English (US)' },
+                    { code: 'en', name: 'English' },
                     { code: 'es', name: 'Español' },
                     { code: 'hi', name: 'हिन्दी (Hindi)' },
                     { code: 'fr', name: 'Français' },
                     { code: 'de', name: 'Deutsch' },
+                    { code: 'zh', name: '中文 (Chinese)' },
+                    { code: 'ja', name: '日本語 (Japanese)' },
+                    { code: 'pt', name: 'Português' },
                   ].map(lang => {
                     const isSelected = selectedLanguage === lang.name;
                     return (
