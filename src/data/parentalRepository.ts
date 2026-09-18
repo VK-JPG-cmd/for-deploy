@@ -23,10 +23,13 @@ const fetch = async (url: string | Request, options: any = {}) => {
 
 const getAuthHeader = async () => {
   const token = await Storage.getAuthToken();
-  return {
-    'Authorization': token ? `Bearer ${token}` : 'Bearer mock_secure_jwt_token_for_newuser',
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
 };
 
 export interface BackendChild {

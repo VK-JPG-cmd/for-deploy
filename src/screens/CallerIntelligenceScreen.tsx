@@ -77,11 +77,16 @@ export const CallerIntelligenceScreen: React.FC<CallerIntelligenceScreenProps> =
 
   const [activeTab, setActiveTab] = useState<number>(0);
 
-  const [recentAlerts] = useState<string[]>([
-    'Critical Scam Blocked: +1 (866) 492-3001 at 09:42 AM',
-    'Auto-Blocked Telemarketer: +1 (510) 902-8811 at 08:30 AM',
-    'Spam Risk Detected: +1 (202) 555-0143 at 11:30 AM'
-  ]);
+  const recentAlerts = React.useMemo(() => {
+    const list: string[] = [];
+    blockedNumbers.forEach(b => {
+      list.push(`Blocked: ${b.name || b.number} (${b.reason || 'Spam/Scam'})`);
+    });
+    spamCalls.forEach(s => {
+      list.push(`Spam Detected: ${s.name || s.number} (Risk: ${s.riskScore}%)`);
+    });
+    return list;
+  }, [blockedNumbers, spamCalls]);
 
   // Search
   const [searchQuery, setSearchQuery] = useState('');

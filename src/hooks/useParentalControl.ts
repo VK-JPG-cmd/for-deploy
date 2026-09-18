@@ -60,16 +60,12 @@ export function useParentalControl() {
           localScreentimeRef.current[linkedChild.id] = {
             child_id: linkedChild.id,
             daily_limit_minutes: linkedChild.totalLimitMinutes || 240,
-            current_usage_minutes: linkedChild.currentUsageMinutes || 135,
+            current_usage_minutes: linkedChild.currentUsageMinutes || 0,
             is_locked_remotely: false,
           };
 
-          localAppsRef.current[linkedChild.id] = [
-            { app_id: '301', app_name: 'YouTube', category: 'Entertainment', is_blocked: false },
-            { app_id: '302', app_name: 'Chrome', category: 'Browsers', is_blocked: false },
-            { app_id: '303', app_name: 'WhatsApp', category: 'Communication', is_blocked: false },
-            { app_id: '304', app_name: 'Instagram', category: 'Social', is_blocked: false },
-          ];
+          const storedApps = await Storage.getApps(linkedChild.id);
+          localAppsRef.current[linkedChild.id] = storedApps || [];
 
           setChildren([...localChildrenRef.current]);
           setSelectedProfileId(linkedChild.id);
@@ -454,28 +450,25 @@ export function useParentalControl() {
         throw e;
       }
     } else {
-      const mockChild = {
+      const newChild = {
         id: (localChildrenRef.current.length + 1).toString(),
         name,
         age,
         avatarColor: localChildrenRef.current.length % 2 === 0 ? '#EC4899' : '#A855F7',
         battery: '100%',
         batteryLevel: 100,
-        device: 'Samsung S23 Ultra',
-        deviceName: 'Samsung S23 Ultra',
+        device: 'Child Device',
+        deviceName: 'Child Device',
         lastActive: 'Active Now',
         is_active_online: true,
         linking_code: linkingCode,
-        appUsage: [
-          { name: 'Roblox', time: '1h 15m', color: '#EC4899' },
-          { name: 'YouTube', time: '45m', color: '#A855F7' }
-        ]
+        appUsage: []
       };
-      localChildrenRef.current.push(mockChild);
+      localChildrenRef.current.push(newChild);
       setChildren([...localChildrenRef.current]);
-      setSelectedProfileId(mockChild.id);
+      setSelectedProfileId(newChild.id);
       await Storage.setChildrenList(localChildrenRef.current);
-      return mockChild;
+      return newChild;
     }
   }, [backendAvailable, refreshChildrenList]);
 

@@ -34,30 +34,15 @@ export interface MockCall {
   frequency: string;
 }
 
-const defaultBlockedNumbers: BlockedNumber[] = [
-  { number: '+1 (800) 555-0199', name: 'Robo-Loan Inc.', reason: 'Aggressive Spam Dialing', date: '2026-06-02' },
-  { number: '+1 (866) 492-3001', name: 'Imposter IRS Agent', reason: 'Scam Attempt', date: '2026-06-03' },
-  { number: '+1 (510) 902-8811', name: 'Insurance Telemarketer', reason: 'Unwanted Solicitation', date: '2026-06-04' }
-];
-
-const defaultSpamCalls: SpamCall[] = [
-  { name: 'Suspected Robocall', number: '+1 (202) 555-0143', riskScore: 85, date: '2026-06-04 11:30 AM' },
-  { name: 'Phishing Attempt', number: '+1 (312) 555-0178', riskScore: 92, date: '2026-06-04 09:15 AM' },
-  { name: 'Telemarketing SPAM', number: '+1 (415) 555-0192', riskScore: 75, date: '2026-06-03 04:22 PM' }
-];
-
-const defaultCallHistory: MockCall[] = [
-  { name: 'Leo (Family)', number: '+1 (555) 019-2831', riskScore: 2, type: 'Normal', carrier: 'AT&T', location: 'San Jose, CA', frequency: '12 calls/week' },
-  { name: 'Unknown Caller', number: '+1 (415) 555-0192', riskScore: 65, type: 'Suspicious', carrier: 'Unknown', location: 'Unknown', frequency: '2 calls/week' },
-  { name: 'Telemarketing Robocall', number: '+1 (202) 555-0143', riskScore: 85, type: 'Spam', carrier: 'Level 3 Telecom', location: 'Seattle, WA', frequency: '45 calls/week' },
-  { name: 'Delivery Driver', number: '+1 (310) 555-0199', riskScore: 10, type: 'Normal', carrier: 'T-Mobile', location: 'Los Angeles, CA', frequency: '1 call/week' },
-];
+const defaultBlockedNumbers: BlockedNumber[] = [];
+const defaultSpamCalls: SpamCall[] = [];
+const defaultCallHistory: MockCall[] = [];
 
 export function useCallerIntelligence(childId: string = '1') {
-  const [blockedNumbers, setBlockedNumbers] = useState<BlockedNumber[]>(defaultBlockedNumbers);
-  const [spamCalls, setSpamCalls] = useState<SpamCall[]>(defaultSpamCalls);
+  const [blockedNumbers, setBlockedNumbers] = useState<BlockedNumber[]>([]);
+  const [spamCalls, setSpamCalls] = useState<SpamCall[]>([]);
   const [reportHistory, setReportHistory] = useState<CallReport[]>([]);
-  const [callHistory, setCallHistory] = useState<MockCall[]>(defaultCallHistory);
+  const [callHistory, setCallHistory] = useState<MockCall[]>([]);
   const [autoBlockEnabled, setAutoBlockEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 

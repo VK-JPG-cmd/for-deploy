@@ -21,8 +21,8 @@ export const ApkScanner = {
   async scanApk(filePath: string): Promise<EnrichedAnalysisResult> {
     const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
     let permissions: string[] = [];
-    let packageName = 'com.simulated.app';
-    let version = '1.0.0-mock';
+    let packageName = 'com.unknown.app';
+    let version = '1.0.0';
     let isNativeSuccess = false;
 
     // 1. Attempt Native Scanning on Android
@@ -36,12 +36,11 @@ export const ApkScanner = {
           isNativeSuccess = true;
         }
       } catch (error) {
-        // Fallback to simulation if native parsing fails (e.g. file is corrupted or not a valid ZIP)
-        console.warn('Native APK scanning failed, falling back to simulation:', error);
+        console.warn('Native APK scanning failed:', error);
       }
     }
 
-    // 2. If non-Android or parsing failed, return empty permissions rather than mock data
+    // 2. If non-Android or parsing failed, return empty permissions
     if (!isNativeSuccess) {
       permissions = [];
       packageName = fileName.replace(/\.[^/.]+$/, '');

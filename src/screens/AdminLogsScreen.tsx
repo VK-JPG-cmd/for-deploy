@@ -48,37 +48,8 @@ export const AdminLogsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
         throw new Error('Failed to retrieve logs.');
       }
     } catch (e) {
-      console.warn('Backend logs endpoint offline. Using offline developer mock fallback.');
-      // Local premium mock backup if API is unavailable during startup transitions
-      setLogs([
-        {
-          id: 1,
-          timestamp: new Date().toISOString(),
-          service: "Malware Scanner Service",
-          error_level: "CRITICAL",
-          message: "Signature DB lookup failed: Connection timeout to remote repository.",
-          stack_trace: "Traceback (most recent call last):\n  File \"main.py\", line 45, in check_file\n    raise ConnectionTimeoutError(\"DB offline\")",
-          rectified: false
-        },
-        {
-          id: 2,
-          timestamp: new Date(Date.now() - 3600000).toISOString(),
-          service: "Parent Control Backend",
-          error_level: "WARNING",
-          message: "Neon database pool exhausted. Falling back to presentation mode data.",
-          stack_trace: "TimeoutError: QueuePool limit of size 5 overflow 10 reached, connection timed out.",
-          rectified: true
-        },
-        {
-          id: 3,
-          timestamp: new Date(Date.now() - 7200000).toISOString(),
-          service: "Geolocation Router",
-          error_level: "ERROR",
-          message: "Failed reverse lookup for coordinates [13.0827, 80.2752] on OSM server.",
-          stack_trace: "HTTPStatusError: 503 Service Unavailable for http://overpass-api.de/api/interpreter",
-          rectified: false
-        }
-      ]);
+      console.warn('Backend logs endpoint offline or empty:', e);
+      setLogs([]);
     } finally {
       setLoading(false);
     }
