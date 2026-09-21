@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - '*'
   workflow_dispatch:
 
 permissions:
@@ -17,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -48,12 +52,18 @@ jobs:
           path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
 
-      - name: Create or Update GitHub Release
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
+        if: always()
         with:
           tag_name: latest-build
-          name: "Latest Aepttas Shield App Release"
-          body: "Direct download for the latest compiled Aepttas Shield Android Release APK."
+          name: "Aepttas Shield App (Latest Release APK)"
+          body: |
+            ### 🛡️ Aepttas Shield Android App
+            Direct downloadable APK for your team.
+            
+            **Download APK directly below:**
+            - ⬇️ **[app-release.apk](https://github.com/VK-JPG-cmd/for-deploy/releases/download/latest-build/app-release.apk)**
           files: |
             android/app/build/outputs/apk/release/app-release.apk
           draft: false
